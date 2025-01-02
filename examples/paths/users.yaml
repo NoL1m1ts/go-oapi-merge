@@ -1,0 +1,23 @@
+paths:
+  users:
+    get:
+      summary: Get users list
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '../components/schemas.yaml#/components/schemas/User'
+    post:
+      summary: Create new user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/components/schemas/User'
+      responses:
+        '201':
+          description: User created

@@ -1,0 +1,23 @@
+paths:
+  pets:
+    get:
+      summary: Get pets list
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '../components/schemas.yaml#/components/schemas/Pet'
+    post:
+      summary: Create new pet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/components/schemas/Pet'
+      responses:
+        '201':
+          description: Pet created
