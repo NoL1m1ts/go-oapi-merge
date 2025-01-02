@@ -16,15 +16,23 @@ type OpenAPI struct {
 	Paths      map[string]interface{} `yaml:"paths,omitempty"`
 }
 
-// DefaultInputFile is the default input file name
-const DefaultInputFile = "api.yaml"
+type RefString string
 
-// DefaultOutputFile is the default output file name
-const DefaultOutputFile = "merged_api.yaml"
+func (r RefString) MarshalYAML() (interface{}, error) {
+	return &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: string(r),
+		Tag:   "!!str",
+		Style: yaml.DoubleQuotedStyle,
+	}, nil
+}
 
-// OapiYaml merges OpenAPI YAML files.
+const (
+	DefaultInputFile  = "api.yaml"
+	DefaultOutputFile = "merged_api.yaml"
+)
+
 func OapiYaml(inputFile, outputFile string) error {
-	// Set default values if empty
 	if inputFile == "" {
 		inputFile = DefaultInputFile
 	}
@@ -32,30 +40,25 @@ func OapiYaml(inputFile, outputFile string) error {
 		outputFile = DefaultOutputFile
 	}
 
-	// Check if input file exists and is accessible
 	mainContent, err := os.ReadFile(inputFile)
 	if err != nil {
 		return fmt.Errorf("failed to read file %s: %v", inputFile, err)
 	}
 
-	// Validate YAML format
 	var mainAPI OpenAPI
 	if err := yaml.Unmarshal(mainContent, &mainAPI); err != nil {
 		return fmt.Errorf("failed to parse YAML file %s: %v", inputFile, err)
 	}
 
-	// Validate OpenAPI specification format
 	if err := validateOpenAPISpec(&mainAPI); err != nil {
 		return fmt.Errorf("invalid OpenAPI specification in %s: %v", inputFile, err)
 	}
 
-	// Check if output directory exists and is writable
 	outputDir := filepath.Dir(outputFile)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory %s: %v", outputDir, err)
 	}
 
-	// Try to create a temporary file to check if directory is writable
 	tmpFile := filepath.Join(outputDir, ".tmp_write_test")
 	if err := os.WriteFile(tmpFile, []byte{}, 0644); err != nil {
 		return fmt.Errorf("output directory %s is not writable: %v", outputDir, err)
@@ -110,6 +113,8 @@ func OapiYaml(inputFile, outputFile string) error {
 		}
 	}
 
+	ensureRefQuotes(&mainAPI)
+
 	mergedYAML, err := yaml.Marshal(&mainAPI)
 	if err != nil {
 		return fmt.Errorf("failed to marshal YAML: %v", err)
@@ -120,6 +125,43 @@ func OapiYaml(inputFile, outputFile string) error {
 	}
 
 	return nil
+}
+
+func ensureRefQuotes(api *OpenAPI) {
+	if api.Paths != nil {
+		for path, pathItem := range api.Paths {
+			if pathItemMap, ok := pathItem.(map[string]interface{}); ok {
+				api.Paths[path] = ensureRefQuotesInValue(pathItemMap)
+			}
+		}
+	}
+
+	if api.Components != nil {
+		api.Components = ensureRefQuotesInValue(api.Components).(map[string]interface{})
+	}
+}
+
+func ensureRefQuotesInValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		for key, val := range v {
+			if key == "$ref" {
+				if ref, ok := val.(string); ok {
+					v[key] = RefString(ref)
+				}
+			} else {
+				v[key] = ensureRefQuotesInValue(val)
+			}
+		}
+		return v
+	case []interface{}:
+		for i, item := range v {
+			v[i] = ensureRefQuotesInValue(item)
+		}
+		return v
+	default:
+		return v
+	}
 }
 
 func ParseRef(ref string) (filePath string, refPath string, err error) {
@@ -202,7 +244,6 @@ func NormalizeRef(ref string, baseDir string, currentFilePath string) string {
 }
 
 func validateOpenAPISpec(api *OpenAPI) error {
-	// Check OpenAPI version
 	if api.OpenAPI == "" {
 		return fmt.Errorf("missing OpenAPI version")
 	}
@@ -210,7 +251,6 @@ func validateOpenAPISpec(api *OpenAPI) error {
 		return fmt.Errorf("unsupported OpenAPI version: %s (only 3.x versions are supported)", api.OpenAPI)
 	}
 
-	// Check required Info fields
 	if api.Info == nil {
 		return fmt.Errorf("missing required 'info' field")
 	}
