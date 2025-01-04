@@ -1,0 +1,132 @@
+openapi: 3.0.0
+info:
+    description: Example API with references
+    title: Example API
+    version: 1.0.0
+paths:
+    /pets:
+        get:
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                items:
+                                    $ref: '#/components/schemas/Pet'
+                                type: array
+                    description: Successful response
+                "403":
+                    $ref: '#/components/responses/403'
+                "404":
+                    $ref: '#/components/responses/404'
+                "500":
+                    $ref: '#/components/responses/500'
+            summary: Get pets list
+        post:
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Pet'
+            responses:
+                "201":
+                    description: Pet created
+                "403":
+                    $ref: '#/components/responses/403'
+                "404":
+                    $ref: '#/components/responses/404'
+                "500":
+                    $ref: '#/components/responses/500'
+            summary: Create new pet
+    /users:
+        get:
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                items:
+                                    $ref: '#/components/schemas/User'
+                                type: array
+                    description: Successful response
+            summary: Get users list
+        post:
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/User'
+            responses:
+                "201":
+                    description: User created
+            summary: Create new user
+    /users/{id}:
+        get:
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    format: int64
+                    type: integer
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+                    description: Successful response
+                "404":
+                    $ref: '#/components/responses/404'
+                "500":
+                    $ref: '#/components/responses/500'
+            summary: Get user by id
+components:
+    responses:
+        "403":
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Error'
+            description: Action is forbidden
+        "404":
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Error'
+            description: Resource not found
+        "500":
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Error'
+            description: Internal server error
+    schemas:
+        Error:
+            properties:
+                code:
+                    type: integer
+                message:
+                    type: string
+        Pet:
+            properties:
+                id:
+                    format: int64
+                    type: integer
+                name:
+                    type: string
+            type: object
+        User:
+            properties:
+                email:
+                    format: email
+                    type: string
+                id:
+                    format: int64
+                    type: integer
+                username:
+                    type: string
+            required:
+                - username
+                - email
+            type: object
