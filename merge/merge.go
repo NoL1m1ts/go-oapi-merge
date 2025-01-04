@@ -167,30 +167,46 @@ func mergeComponents(nestedComponents map[string]interface{}, mainAPI *OpenAPI) 
 }
 
 func findRef(api map[string]interface{}, urlsToParse map[string]bool, currentFilePath string) error {
-	for _, value := range api {
-		if val, ok := value.(map[string]interface{}); ok {
-			if ref, ok := val["$ref"].(string); ok {
+	var processValue func(interface{}) error
+
+	processValue = func(value interface{}) error {
+		switch v := value.(type) {
+		case map[string]interface{}:
+			if ref, ok := v["$ref"].(string); ok {
 				s, err := resolveRef(ref, currentFilePath)
 				if err != nil {
 					return fmt.Errorf("failed to resolve reference '%s': %v", ref, err)
 				}
 				if s != "" {
 					urlsToParse[s] = true
-					val["$ref"] = "#/" + strings.Split(ref, "#/")[1]
-				}
-			} else {
-				if err := findRef(val, urlsToParse, currentFilePath); err != nil {
-					return err
-				}
-			}
-		} else if arr, ok := value.([]interface{}); ok {
-			for _, item := range arr {
-				if v, ok := item.(map[string]interface{}); ok {
-					if err := findRef(v, urlsToParse, currentFilePath); err != nil {
-						return err
+					if strings.Contains(ref, "#") && !strings.HasPrefix(ref, "#") {
+						parts := strings.Split(ref, "#")
+						if len(parts) > 1 && strings.HasPrefix(parts[1], "/") {
+							v["$ref"] = "#" + parts[1]
+						} else if len(parts) > 1 {
+							v["$ref"] = "#/" + parts[1]
+						}
 					}
 				}
 			}
+			for _, val := range v {
+				if err := processValue(val); err != nil {
+					return err
+				}
+			}
+		case []interface{}:
+			for _, item := range v {
+				if err := processValue(item); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+
+	for _, value := range api {
+		if err := processValue(value); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -234,12 +250,25 @@ func resolveRef(ref, currentFilePath string) (string, error) {
 		return "", nil
 	}
 
-	refParts := strings.SplitN(ref, "#", 2)
-	relativePath := refParts[0]
-	basePath := filepath.Dir(currentFilePath)
-	absolutePath := filepath.Join(basePath, relativePath)
+	var relativePath string
+	if strings.Contains(ref, "#") {
+		refParts := strings.SplitN(ref, "#", 2)
+		relativePath = refParts[0]
+	} else {
+		relativePath = ref
+	}
 
-	return filepath.Clean(absolutePath), nil
+	if relativePath == "" {
+		return "", nil
+	}
+
+	if !filepath.IsAbs(relativePath) {
+		basePath := filepath.Dir(currentFilePath)
+		absolutePath := filepath.Join(basePath, relativePath)
+		return filepath.Clean(absolutePath), nil
+	}
+
+	return relativePath, nil
 }
 
 func checkForRefs(data interface{}) error {

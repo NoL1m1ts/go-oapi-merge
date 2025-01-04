@@ -56,6 +56,106 @@ func TestOapiYaml(t *testing.T) {
 	assert.Equal(t, input.Paths, output.Paths)
 }
 
+func TestOapiYamlWithNilComponents(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputFile := filepath.Join(tmpDir, "input.yaml")
+	outputFile := filepath.Join(tmpDir, "output.yaml")
+
+	input := OpenAPI{
+		OpenAPI: "3.0.0",
+		Info: map[string]interface{}{
+			"title":   "Test API",
+			"version": "1.0.0",
+		},
+		Paths: map[string]interface{}{
+			"/test": map[string]interface{}{
+				"get": map[string]interface{}{
+					"summary": "Test endpoint",
+				},
+			},
+		},
+	}
+
+	inputData, err := yaml.Marshal(input)
+	assert.NoError(t, err)
+	err = os.WriteFile(inputFile, inputData, 0644)
+	assert.NoError(t, err)
+
+	err = OapiYaml(inputFile, outputFile)
+	assert.NoError(t, err)
+
+	var output OpenAPI
+	outputData, err := os.ReadFile(outputFile)
+	assert.NoError(t, err)
+	err = yaml.Unmarshal(outputData, &output)
+	assert.NoError(t, err)
+
+	assert.NotNil(t, output.Components)
+	assert.NotNil(t, output.Components["schemas"])
+}
+
+func TestOapiYamlWithNilSchemas(t *testing.T) {
+	tmpDir := t.TempDir()
+	inputFile := filepath.Join(tmpDir, "input.yaml")
+	outputFile := filepath.Join(tmpDir, "output.yaml")
+
+	input := OpenAPI{
+		OpenAPI: "3.0.0",
+		Info: map[string]interface{}{
+			"title":   "Test API",
+			"version": "1.0.0",
+		},
+		Paths:      map[string]interface{}{},
+		Components: make(map[string]interface{}),
+	}
+
+	inputData, err := yaml.Marshal(input)
+	assert.NoError(t, err)
+	err = os.WriteFile(inputFile, inputData, 0644)
+	assert.NoError(t, err)
+
+	err = OapiYaml(inputFile, outputFile)
+	assert.NoError(t, err)
+
+	var output OpenAPI
+	outputData, err := os.ReadFile(outputFile)
+	assert.NoError(t, err)
+	err = yaml.Unmarshal(outputData, &output)
+	assert.NoError(t, err)
+
+	assert.NotNil(t, output.Components["schemas"])
+}
+
+func TestOapiYamlErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	t.Run("invalid input file", func(t *testing.T) {
+		err := OapiYaml("nonexistent.yaml", "output.yaml")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to read input YAML")
+	})
+
+	t.Run("invalid output path", func(t *testing.T) {
+		inputFile := filepath.Join(tmpDir, "input.yaml")
+		input := OpenAPI{
+			OpenAPI: "3.0.0",
+			Info: map[string]interface{}{
+				"title":   "Test API",
+				"version": "1.0.0",
+			},
+		}
+		inputData, err := yaml.Marshal(input)
+		assert.NoError(t, err)
+		err = os.WriteFile(inputFile, inputData, 0644)
+		assert.NoError(t, err)
+
+		invalidPath := filepath.Join(tmpDir, "nonexistent", "output.yaml")
+		err = OapiYaml(inputFile, invalidPath)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to write output file")
+	})
+}
+
 func TestProcessPaths(t *testing.T) {
 	paths := map[string]interface{}{
 		"/users": map[string]interface{}{
@@ -211,6 +311,69 @@ func TestReadYAML(t *testing.T) {
 
 	_, err = readYAML("nonexistent.yaml")
 	assert.Error(t, err)
+}
+
+func TestReadYAMLErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+	currentDir, err := os.Getwd()
+	assert.NoError(t, err)
+	defer func(dir string) {
+		err := os.Chdir(dir)
+		if err != nil {
+			t.Error(err)
+		}
+	}(currentDir)
+
+	err = os.Chdir(tmpDir)
+	assert.NoError(t, err)
+
+	// Test invalid YAML
+	invalidYAML := `
+openapi: 3.0.0
+  invalid:
+    - not valid yaml
+      wrong indentation
+`
+	err = os.WriteFile("invalid.yaml", []byte(invalidYAML), 0644)
+	assert.NoError(t, err)
+
+	// Test non-object YAML
+	arrayYAML := `
+- item1
+- item2
+`
+	err = os.WriteFile("array.yaml", []byte(arrayYAML), 0644)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		filePath      string
+		expectedError string
+	}{
+		{
+			name:          "non-existent file",
+			filePath:      "nonexistent.yaml",
+			expectedError: "failed to read file",
+		},
+		{
+			name:          "invalid YAML",
+			filePath:      "invalid.yaml",
+			expectedError: "failed to unmarshal YAML",
+		},
+		{
+			name:          "non-object YAML",
+			filePath:      "array.yaml",
+			expectedError: "YAML is not an object",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := readYAML(tt.filePath)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectedError)
+		})
+	}
 }
 
 func TestProcessNestedFiles(t *testing.T) {
@@ -653,6 +816,427 @@ func TestCheckForRefsWithComplexStructures(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestProcessPathsWithInvalidTypes(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.yaml")
+	err := os.WriteFile(testFile, []byte("paths: {}"), 0644)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		paths       map[string]interface{}
+		urlsToParse map[string]bool
+		wantErr     bool
+	}{
+		{
+			name: "invalid path type",
+			paths: map[string]interface{}{
+				"/users": "invalid",
+			},
+			urlsToParse: make(map[string]bool),
+			wantErr:     false,
+		},
+		{
+			name: "local ref path",
+			paths: map[string]interface{}{
+				"/users": map[string]interface{}{
+					"$ref": "#/paths/users",
+				},
+			},
+			urlsToParse: make(map[string]bool),
+			wantErr:     false,
+		},
+		{
+			name: "invalid external ref",
+			paths: map[string]interface{}{
+				"/users": map[string]interface{}{
+					"$ref": "nonexistent.yaml#/paths/users",
+				},
+			},
+			urlsToParse: make(map[string]bool),
+			wantErr:     true,
+		},
+		{
+			name: "invalid ref type",
+			paths: map[string]interface{}{
+				"/users": map[string]interface{}{
+					"$ref": 123,
+				},
+			},
+			urlsToParse: make(map[string]bool),
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := processPaths(tt.paths, tt.urlsToParse, testFile)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestProcessNestedFilesErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	t.Run("nonexistent file", func(t *testing.T) {
+		urlsToParse := map[string]bool{
+			"nonexistent.yaml": true,
+		}
+		mainAPI := &OpenAPI{}
+		err := processNestedFiles(urlsToParse, mainAPI)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to read nested YAML file")
+	})
+
+	t.Run("invalid components type", func(t *testing.T) {
+		inputFile := filepath.Join(tmpDir, "invalid.yaml")
+		yamlContent := []byte(`
+components: "invalid"
+`)
+		err := os.WriteFile(inputFile, yamlContent, 0644)
+		assert.NoError(t, err)
+
+		urlsToParse := map[string]bool{
+			inputFile: true,
+		}
+		mainAPI := &OpenAPI{
+			Components: make(map[string]interface{}),
+		}
+		err = processNestedFiles(urlsToParse, mainAPI)
+		assert.NoError(t, err) // Should not error as invalid components are skipped
+	})
+
+	t.Run("no components", func(t *testing.T) {
+		inputFile := filepath.Join(tmpDir, "no_components.yaml")
+		yamlContent := []byte(`
+paths:
+  /test:
+    get:
+      summary: Test endpoint
+`)
+		err := os.WriteFile(inputFile, yamlContent, 0644)
+		assert.NoError(t, err)
+
+		urlsToParse := map[string]bool{
+			inputFile: true,
+		}
+		mainAPI := &OpenAPI{
+			Components: make(map[string]interface{}),
+		}
+		err = processNestedFiles(urlsToParse, mainAPI)
+		assert.NoError(t, err)
+	})
+}
+
+func TestProcessPathsComplex(t *testing.T) {
+	tmpDir := t.TempDir()
+	currentDir, err := os.Getwd()
+	assert.NoError(t, err)
+	defer func(dir string) {
+		err := os.Chdir(dir)
+		if err != nil {
+			panic(err)
+		}
+	}(currentDir)
+
+	err = os.Chdir(tmpDir)
+	assert.NoError(t, err)
+
+	// Create test files
+	testYAML := `
+openapi: 3.0.0
+components:
+  schemas:
+    Test:
+      type: object
+      properties:
+        id:
+          type: string
+`
+
+	invalidYAML := `
+openapi: 3.0.0
+components:
+  schemas:
+    Test: "invalid"  # Should be an object
+`
+
+	emptyYAML := `
+openapi: 3.0.0
+components:
+  empty: {}
+`
+
+	err = os.WriteFile("test.yaml", []byte(testYAML), 0644)
+	assert.NoError(t, err)
+
+	err = os.WriteFile("invalid.yaml", []byte(invalidYAML), 0644)
+	assert.NoError(t, err)
+
+	err = os.WriteFile("empty.yaml", []byte(emptyYAML), 0644)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name          string
+		paths         map[string]interface{}
+		currentFile   string
+		expectedError string
+	}{
+		{
+			name: "nested references",
+			paths: map[string]interface{}{
+				"/test": map[string]interface{}{
+					"$ref": "test.yaml#/components",
+				},
+			},
+			currentFile:   "main.yaml",
+			expectedError: "",
+		},
+		{
+			name: "invalid nested API type",
+			paths: map[string]interface{}{
+				"/test": map[string]interface{}{
+					"$ref": "invalid.yaml#/components/schemas/Test",
+				},
+			},
+			currentFile:   "main.yaml",
+			expectedError: "reference 'components/schemas/Test' not found in file 'invalid.yaml'",
+		},
+		{
+			name: "non-existent reference path",
+			paths: map[string]interface{}{
+				"/test": map[string]interface{}{
+					"$ref": "empty.yaml#/nonexistent",
+				},
+			},
+			currentFile:   "main.yaml",
+			expectedError: "reference 'nonexistent' not found",
+		},
+		{
+			name: "non-existent file",
+			paths: map[string]interface{}{
+				"/test": map[string]interface{}{
+					"$ref": "nonexistent.yaml#/paths/test",
+				},
+			},
+			currentFile:   "main.yaml",
+			expectedError: "failed to read file",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			urlsToParse := make(map[string]bool)
+			err := processPaths(tt.paths, urlsToParse, tt.currentFile)
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				// For successful cases, verify the content was merged correctly
+				if tt.name == "nested references" {
+					path, ok := tt.paths["/test"].(map[string]interface{})
+					assert.True(t, ok)
+					assert.NotNil(t, path)
+					schemas, ok := path["schemas"].(map[string]interface{})
+					assert.True(t, ok)
+					assert.NotNil(t, schemas)
+					test, ok := schemas["Test"].(map[string]interface{})
+					assert.True(t, ok)
+					assert.Equal(t, "object", test["type"])
+					properties, ok := test["properties"].(map[string]interface{})
+					assert.True(t, ok)
+					assert.NotNil(t, properties)
+					id, ok := properties["id"].(map[string]interface{})
+					assert.True(t, ok)
+					assert.Equal(t, "string", id["type"])
+				}
+			}
+		})
+	}
+}
+
+func TestCheckForRefsComplex(t *testing.T) {
+	tests := []struct {
+		name          string
+		data          interface{}
+		expectedError string
+	}{
+		{
+			name: "array with nested refs",
+			data: []interface{}{
+				map[string]interface{}{
+					"$ref": "test.yaml#/components/schemas/Test",
+				},
+				map[string]interface{}{
+					"nested": map[string]interface{}{
+						"$ref": "test.yaml#/components/schemas/Other",
+					},
+				},
+			},
+			expectedError: "",
+		},
+		{
+			name: "array with non-string ref",
+			data: []interface{}{
+				map[string]interface{}{
+					"$ref": 123, // Invalid ref type
+				},
+			},
+			expectedError: "",
+		},
+		{
+			name: "map with non-string ref",
+			data: map[string]interface{}{
+				"$ref": []interface{}{}, // Invalid ref type
+			},
+			expectedError: "",
+		},
+		{
+			name: "deeply nested non-string ref",
+			data: map[string]interface{}{
+				"level1": map[string]interface{}{
+					"level2": map[string]interface{}{
+						"$ref": true, // Invalid ref type
+					},
+				},
+			},
+			expectedError: "",
+		},
+		{
+			name: "mixed valid and non-string refs",
+			data: map[string]interface{}{
+				"valid": map[string]interface{}{
+					"$ref": "test.yaml#/components/schemas/Test",
+				},
+				"invalid": map[string]interface{}{
+					"$ref": 42.0, // Invalid ref type
+				},
+			},
+			expectedError: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkForRefs(tt.data)
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestFindRefComplex(t *testing.T) {
+	tests := []struct {
+		name          string
+		api           map[string]interface{}
+		currentFile   string
+		expectedError string
+		expectedURLs  map[string]bool
+	}{
+		{
+			name: "deeply nested refs",
+			api: map[string]interface{}{
+				"level1": map[string]interface{}{
+					"level2": map[string]interface{}{
+						"$ref": "test.yaml#/components/schemas/Test",
+					},
+					"array": []interface{}{
+						map[string]interface{}{
+							"$ref": "other.yaml#/components/schemas/Other",
+						},
+					},
+				},
+			},
+			currentFile:   "main.yaml",
+			expectedError: "",
+			expectedURLs: map[string]bool{
+				"test.yaml":  true,
+				"other.yaml": true,
+			},
+		},
+		{
+			name: "invalid ref path",
+			api: map[string]interface{}{
+				"test": map[string]interface{}{
+					"$ref": "test.yaml#invalid/path",
+				},
+			},
+			currentFile:   "main.yaml",
+			expectedError: "",
+			expectedURLs: map[string]bool{
+				"test.yaml": true,
+			},
+		},
+		{
+			name: "array with mixed content",
+			api: map[string]interface{}{
+				"items": []interface{}{
+					"string item",
+					42,
+					map[string]interface{}{
+						"$ref": "test.yaml#/components/schemas/Test",
+					},
+					[]interface{}{
+						map[string]interface{}{
+							"$ref": "other.yaml#/components/schemas/Other",
+						},
+					},
+				},
+			},
+			currentFile:   "main.yaml",
+			expectedError: "",
+			expectedURLs: map[string]bool{
+				"test.yaml":  true,
+				"other.yaml": true,
+			},
+		},
+		{
+			name: "invalid ref resolution",
+			api: map[string]interface{}{
+				"test": map[string]interface{}{
+					"$ref": "../../invalid.yaml#/components/schemas/Test",
+				},
+			},
+			currentFile:   "main.yaml",
+			expectedError: "",
+			expectedURLs: map[string]bool{
+				"../../invalid.yaml": true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			urlsToParse := make(map[string]bool)
+			err := findRef(tt.api, urlsToParse, tt.currentFile)
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				// Check that all expected URLs are present
+				for url := range tt.expectedURLs {
+					assert.True(t, urlsToParse[url], "Expected URL %s not found in urlsToParse", url)
+				}
+				// Check that no unexpected URLs are present
+				for url := range urlsToParse {
+					assert.True(t, tt.expectedURLs[url], "Unexpected URL %s found in urlsToParse", url)
+				}
 			}
 		})
 	}
