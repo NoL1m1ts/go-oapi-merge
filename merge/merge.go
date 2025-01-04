@@ -31,7 +31,6 @@ func OapiYaml(inputFile, outputFile string) error {
 		return fmt.Errorf("failed to read input YAML: %v", err)
 	}
 
-	// Инициализация компонентов, если они отсутствуют
 	if mainAPI.Components == nil {
 		mainAPI.Components = make(map[string]interface{})
 	}
@@ -39,18 +38,15 @@ func OapiYaml(inputFile, outputFile string) error {
 		mainAPI.Components["schemas"] = make(map[string]interface{})
 	}
 
-	// Сбор ссылок на вложенные файлы
 	urlsToParse := make(map[string]bool)
 	if err := processPaths(mainAPI.Paths, urlsToParse, inputFile); err != nil {
 		return fmt.Errorf("failed to process paths: %v", err)
 	}
 
-	// Обработка вложенных файлов и объединение компонентов
 	if err := processNestedFiles(urlsToParse, mainAPI); err != nil {
 		return fmt.Errorf("failed to process nested files: %v", err)
 	}
 
-	// Запись результата в выходной файл
 	outputData, err := yaml.Marshal(mainAPI)
 	if err != nil {
 		return fmt.Errorf("failed to marshal YAML: %v", err)
@@ -249,15 +245,12 @@ func resolveRef(ref, currentFilePath string) (string, error) {
 func checkForRefs(data interface{}) error {
 	switch v := data.(type) {
 	case map[string]interface{}:
-		// Если это map, проверяем наличие $ref
 		if ref, ok := v["$ref"].(string); ok {
-			// Обрезаем ссылку до локальной (оставляем только часть после #)
 			if strings.Contains(ref, "#") {
 				v["$ref"] = "#" + strings.SplitN(ref, "#", 2)[1]
 			}
 		}
 
-		// Рекурсивно проверяем все значения в map
 		for _, value := range v {
 			if err := checkForRefs(value); err != nil {
 				return err
@@ -265,7 +258,6 @@ func checkForRefs(data interface{}) error {
 		}
 
 	case []interface{}:
-		// Если это slice, рекурсивно проверяем все элементы
 		for _, item := range v {
 			if err := checkForRefs(item); err != nil {
 				return err
