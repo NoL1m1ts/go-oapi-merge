@@ -133,7 +133,7 @@ paths:
     $ref: './paths/pets.yaml#/paths/pets'
 components:
   schemas:
-    $ref: './components/schemas.yaml#/components/schemas'
+    $ref: './common/schemas.yaml#/common/schemas'
 ```
 
 You can use these examples as a starting point:

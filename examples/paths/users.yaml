@@ -1,23 +1,60 @@
-paths:
-  users:
-    get:
-      summary: Get users list
-      responses:
-        '200':
-          description: Successful response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '../components/schemas.yaml#/components/schemas/User'
-    post:
-      summary: Create new user
-      requestBody:
+users:
+  get:
+    summary: Get users list
+    responses:
+      '200':
+        description: Successful response
         content:
           application/json:
             schema:
-              $ref: '../components/schemas.yaml#/components/schemas/User'
-      responses:
-        '201':
-          description: User created
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+  post:
+    summary: Create new user
+    requestBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+    responses:
+      '201':
+        description: User created
+users-by-id:
+  get:
+    summary: Get user by id
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '200':
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      '404':
+        $ref: '../common/responses.yaml#/components/responses/404'
+      '500':
+        $ref: '../common/responses.yaml#/components/responses/500'
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+      required:
+        - username
+        - email

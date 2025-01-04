@@ -6,10 +6,8 @@ info:
 
 paths:
   /users:
-    $ref: './paths/users.yaml#/paths/users'
+    $ref: './paths/users.yaml#/users'
+  /users/{id}:
+    $ref: './paths/users.yaml#/users-by-id'
   /pets:
-    $ref: './paths/pets.yaml#/paths/pets'
-
-components:
-  schemas:
-    $ref: './components/schemas.yaml#/components/schemas'
+    $ref: './paths/pets.yaml#/pets'

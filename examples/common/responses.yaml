@@ -1,0 +1,28 @@
+components:
+  schemas:
+    Error:
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+
+  responses:
+    '403':
+      description: Action is forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '404':
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    '500':
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
