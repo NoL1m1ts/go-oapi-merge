@@ -1,0 +1,18 @@
+paths:
+  /items:
+    get:
+      summary: Get items
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
