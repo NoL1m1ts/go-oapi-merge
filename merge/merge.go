@@ -22,14 +22,16 @@ type OpenAPI struct {
 var (
 	globalComponents = make(map[string]interface{})
 	globalResponses  = make(map[string]interface{})
+	globalExamples   = make(map[string]interface{})
 )
 
 func OapiYaml(inputFile, outputFile string) error {
 	mainAPI, err := readApiYAML(inputFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read input YAML: %v", err)
 	}
 
+	// Инициализация компонентов, если они отсутствуют
 	if mainAPI.Components == nil {
 		mainAPI.Components = make(map[string]interface{})
 	}
@@ -37,21 +39,34 @@ func OapiYaml(inputFile, outputFile string) error {
 		mainAPI.Components["schemas"] = make(map[string]interface{})
 	}
 
+	// Сбор ссылок на вложенные файлы
 	urlsToParse := make(map[string]bool)
 	if err := processPaths(mainAPI.Paths, urlsToParse, inputFile); err != nil {
-		return err
+		return fmt.Errorf("failed to process paths: %v", err)
 	}
 
+	// Обработка вложенных файлов и объединение компонентов
 	if err := processNestedFiles(urlsToParse, mainAPI); err != nil {
-		return err
+		return fmt.Errorf("failed to process nested files: %v", err)
 	}
 
+	// Запись результата в выходной файл
 	outputData, err := yaml.Marshal(mainAPI)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal YAML: %v", err)
 	}
 
-	return os.WriteFile(outputFile, outputData, 0644)
+	if err := os.WriteFile(outputFile, outputData, 0644); err != nil {
+		return fmt.Errorf("failed to write output file: %v", err)
+	}
+
+	return nil
+}
+
+func decodeRef(ref string) string {
+	ref = strings.ReplaceAll(ref, "~1", "/")
+	ref = strings.ReplaceAll(ref, "~0", "~")
+	return ref
 }
 
 func processPaths(paths map[string]interface{}, urlsToParse map[string]bool, currentFilePath string) error {
@@ -64,7 +79,7 @@ func processPaths(paths map[string]interface{}, urlsToParse map[string]bool, cur
 		if ref, ok := pathMap["$ref"].(string); ok {
 			refPath, err := resolveRef(ref, currentFilePath)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to resolve reference '%s': %v", ref, err)
 			}
 
 			if refPath == "" {
@@ -73,18 +88,25 @@ func processPaths(paths map[string]interface{}, urlsToParse map[string]bool, cur
 
 			nested, err := readYAML(refPath)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read YAML file '%s': %v", refPath, err)
 			}
 
 			_, after, _ := strings.Cut(ref, "#/")
-			if nestedAPI, ok := nested[after].(map[string]interface{}); ok {
-				paths[pathKey] = nestedAPI
+			after = decodeRef(after)
+			if nested[after] == nil {
+				return fmt.Errorf("reference '%s' not found in file '%s'", after, refPath)
 			}
+
+			nestedAPI, ok := nested[after].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("invalid reference type at '%s' in file '%s': expected map[string]interface{}, got %T", after, refPath, nested[after])
+			}
+			paths[pathKey] = nestedAPI
 
 			urlsToParse[refPath] = true
 
-			if err := findRef(nested[after].(map[string]interface{}), urlsToParse, refPath); err != nil {
-				return err
+			if err := findRef(nestedAPI, urlsToParse, refPath); err != nil {
+				return fmt.Errorf("failed to find references in nested API: %v", err)
 			}
 		}
 	}
@@ -95,17 +117,23 @@ func processNestedFiles(urlsToParse map[string]bool, mainAPI *OpenAPI) error {
 	for url := range urlsToParse {
 		nested, err := readYAML(url)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read nested YAML file '%s': %v", url, err)
 		}
 
 		if nestedComponents, ok := nested["components"].(map[string]interface{}); ok {
-			mergeComponents(nestedComponents, mainAPI)
+			if err := mergeComponents(nestedComponents, mainAPI); err != nil {
+				return fmt.Errorf("failed to merge components from file '%s': %v", url, err)
+			}
 		}
 	}
 	return nil
 }
 
-func mergeComponents(nestedComponents map[string]interface{}, mainAPI *OpenAPI) {
+func mergeComponents(nestedComponents map[string]interface{}, mainAPI *OpenAPI) error {
+	if err := checkForRefs(nestedComponents); err != nil {
+		return fmt.Errorf("failed to check for references in components: %v", err)
+	}
+
 	if nestedSchemas, ok := nestedComponents["schemas"].(map[string]interface{}); ok {
 		for key, value := range nestedSchemas {
 			if _, exists := globalComponents[key]; !exists {
@@ -126,6 +154,20 @@ func mergeComponents(nestedComponents map[string]interface{}, mainAPI *OpenAPI) 
 			}
 		}
 	}
+
+	if nestedExamples, ok := nestedComponents["examples"].(map[string]interface{}); ok {
+		if mainAPI.Components["examples"] == nil {
+			mainAPI.Components["examples"] = make(map[string]interface{})
+		}
+		for key, value := range nestedExamples {
+			if _, exists := globalExamples[key]; !exists {
+				globalExamples[key] = value
+				mainAPI.Components["examples"].(map[string]interface{})[key] = value
+			}
+		}
+	}
+
+	return nil
 }
 
 func findRef(api map[string]interface{}, urlsToParse map[string]bool, currentFilePath string) error {
@@ -134,7 +176,7 @@ func findRef(api map[string]interface{}, urlsToParse map[string]bool, currentFil
 			if ref, ok := val["$ref"].(string); ok {
 				s, err := resolveRef(ref, currentFilePath)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to resolve reference '%s': %v", ref, err)
 				}
 				if s != "" {
 					urlsToParse[s] = true
@@ -161,12 +203,12 @@ func findRef(api map[string]interface{}, urlsToParse map[string]bool, currentFil
 func readApiYAML(filePath string) (*OpenAPI, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file '%s': %v", filePath, err)
 	}
 
 	var api OpenAPI
 	if err := yaml.Unmarshal(data, &api); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal YAML: %v", err)
 	}
 
 	return &api, nil
@@ -175,17 +217,17 @@ func readApiYAML(filePath string) (*OpenAPI, error) {
 func readYAML(filePath string) (map[string]interface{}, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file '%s': %v", filePath, err)
 	}
 
 	var api interface{}
 	if err := yaml.Unmarshal(data, &api); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal YAML: %v", err)
 	}
 
 	apiMap, ok := api.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("yaml должен быть объектом")
+		return nil, fmt.Errorf("YAML is not an object")
 	}
 
 	return apiMap, nil
@@ -202,4 +244,33 @@ func resolveRef(ref, currentFilePath string) (string, error) {
 	absolutePath := filepath.Join(basePath, relativePath)
 
 	return filepath.Clean(absolutePath), nil
+}
+
+func checkForRefs(data interface{}) error {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		// Если это map, проверяем наличие $ref
+		if ref, ok := v["$ref"].(string); ok {
+			// Обрезаем ссылку до локальной (оставляем только часть после #)
+			if strings.Contains(ref, "#") {
+				v["$ref"] = "#" + strings.SplitN(ref, "#", 2)[1]
+			}
+		}
+
+		// Рекурсивно проверяем все значения в map
+		for _, value := range v {
+			if err := checkForRefs(value); err != nil {
+				return err
+			}
+		}
+
+	case []interface{}:
+		// Если это slice, рекурсивно проверяем все элементы
+		for _, item := range v {
+			if err := checkForRefs(item); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
