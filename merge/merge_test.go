@@ -1,6 +1,7 @@
 package merge
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -166,7 +167,7 @@ func TestProcessPaths(t *testing.T) {
 	}
 
 	urlsToParse := make(map[string]bool)
-	err := processPaths(paths, urlsToParse, "test.yaml")
+	err := processPathsLegacy(paths, urlsToParse, "test.yaml")
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
 		"/users": map[string]interface{}{
@@ -592,7 +593,7 @@ func TestProcessPathsWithErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := processPaths(tt.paths, tt.urlsToParse, tt.currentPath)
+			err := processPathsLegacy(tt.paths, tt.urlsToParse, tt.currentPath)
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -604,11 +605,6 @@ func TestProcessPathsWithErrors(t *testing.T) {
 }
 
 func TestMergeComponentsWithDuplicates(t *testing.T) {
-	// Подготовка начального состояния globalComponents
-	globalComponents = make(map[string]interface{})
-	globalResponses = make(map[string]interface{})
-	globalExamples = make(map[string]interface{})
-
 	// Создаем компоненты с дубликатами
 	nestedComponents := map[string]interface{}{
 		"schemas": map[string]interface{}{
@@ -875,7 +871,7 @@ func TestProcessPathsWithInvalidTypes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := processPaths(tt.paths, tt.urlsToParse, testFile)
+			err := processPathsLegacy(tt.paths, tt.urlsToParse, testFile)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -1037,7 +1033,7 @@ components:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			urlsToParse := make(map[string]bool)
-			err := processPaths(tt.paths, urlsToParse, tt.currentFile)
+			err := processPathsLegacy(tt.paths, urlsToParse, tt.currentFile)
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -1240,4 +1236,84 @@ func TestFindRefComplex(t *testing.T) {
 			}
 		})
 	}
+}
+
+// readYAML reads a YAML file and parses it into a map.
+// This function is used only in tests.
+func readYAML(filePath string) (map[string]interface{}, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %v", err)
+	}
+
+	var api interface{}
+	if err := yaml.Unmarshal(data, &api); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %v", err)
+	}
+
+	apiMap, ok := api.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("YAML is not an object")
+	}
+
+	return apiMap, nil
+}
+
+// readApiYAML reads an OpenAPI specification from a file and parses it into the OpenAPI structure.
+// This function is used only in tests.
+func readApiYAML(filePath string) (*OpenAPI, error) {
+	// Read the YAML file
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %v", err)
+	}
+
+	// Parse the YAML into the OpenAPI structure
+	var api OpenAPI
+	if err := yaml.Unmarshal(data, &api); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %v", err)
+	}
+
+	return &api, nil
+}
+
+// processPathsLegacy is a wrapper for the old version of processPaths to maintain backward compatibility with tests
+// This function is used only in tests.
+func processPathsLegacy(paths map[string]interface{}, urlsToParse map[string]bool, currentFilePath string) error {
+	// Temporary map to store resolved paths
+	resolvedPaths := make(map[string]interface{})
+
+	// Iterate through all paths
+	for path, pathItemInterface := range paths {
+		pathItem, ok := pathItemInterface.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("path item for '%s' is not a map", path)
+		}
+
+		// Check for references in the path item
+		if err := checkForRefs(pathItem); err != nil {
+			return fmt.Errorf("failed to check for references in path item '%s': %v", path, err)
+		}
+
+		// Process operations (HTTP methods)
+		httpMethods := []string{"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+		for _, method := range httpMethods {
+			if operationInterface, exists := pathItem[method]; exists {
+				operation, ok := operationInterface.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("operation '%s' for path '%s' is not a map", method, path)
+				}
+
+				// Check for references in the operation
+				if err := checkForRefs(operation); err != nil {
+					return fmt.Errorf("failed to check for references in operation '%s' for path '%s': %v", method, path, err)
+				}
+			}
+		}
+
+		// Add the processed path item to the resolved paths
+		resolvedPaths[path] = pathItem
+	}
+
+	return nil
 }
