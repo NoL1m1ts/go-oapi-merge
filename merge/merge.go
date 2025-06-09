@@ -183,8 +183,8 @@ func addMapEntry(node *yaml.Node, key string, value interface{}) error {
 			Value: v,
 		}
 
-		// Special handling for external references - ensure they are quoted
-		if key == "$ref" && !strings.HasPrefix(v, "#") {
+		// Special handling for external references and paths - ensure they are quoted
+		if (key == "$ref" && !strings.HasPrefix(v, "#")) || key == "path" {
 			valueNode.Style = yaml.SingleQuotedStyle
 		}
 	case int:

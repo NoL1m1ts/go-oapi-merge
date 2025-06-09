@@ -1,0 +1,4523 @@
+openapi: 3.0.0
+info:
+  description: API for our project
+  title: Name of project
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /cities/{id}:
+    get:
+      description: Get city by id
+      summary: Get city by id
+      operationId: GetCityById
+      tags:
+        - geo
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: City details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+    delete:
+      description: Delete city
+      summary: Delete city
+      operationId: DeleteCityById
+      tags:
+        - geo
+      parameters:
+        - in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          title: id
+      responses:
+        204:
+          description: City deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    patch:
+      description: Update city
+      summary: Update city
+      operationId: UpdateCityById
+      tags:
+        - geo
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityCreateUpdate'
+      responses:
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: City updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        400:
+          $ref: '#/components/responses/400'
+  /languages:
+    get:
+      description: Get all languages
+      summary: Get all languages
+      operationId: GetLanguages
+      tags:
+        - geo
+      responses:
+        200:
+          description: List of languages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Language'
+    post:
+      description: Create a new language
+      operationId: CreateLanguage
+      tags:
+        - geo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LanguageCreateUpdate'
+      responses:
+        201:
+          description: Language created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Language'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+      summary: Create a new language
+  /users:
+    get:
+      description: Get all users
+      operationId: GetUsers
+      tags:
+        - users
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sortOrder
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserShort'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+      summary: Get all users
+    post:
+      description: Create a new user
+      tags:
+        - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        201:
+          description: User created successfully
+          headers:
+            Location:
+              description: URL of the created user
+              schema:
+                type: string
+                format: uri
+        400:
+          $ref: '#/components/responses/400'
+      summary: Create a new user
+      operationId: CreateUser
+  /currencies:
+    get:
+      description: Get all currencies
+      summary: Get all currencies
+      operationId: GetCurrencies
+      tags:
+        - geo
+      responses:
+        200:
+          description: List of currencies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Currency'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+    post:
+      description: Create a new currency
+      responses:
+        201:
+          description: Currency created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+      summary: Create a new currency
+      operationId: CreateCurrency
+      tags:
+        - geo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CurrencyCreate'
+  /reviews/{review_id}/activatation:
+    post:
+      description: Activate review
+      tags:
+        - reviews
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Review activated successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Activate review
+      operationId: ActivateReviewById
+  /currencies/{id}:
+    get:
+      description: Get currency by id
+      summary: Get currency by id
+      operationId: GetCurrencyById
+      tags:
+        - geo
+      parameters:
+        - in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          title: id
+      responses:
+        200:
+          description: Currency details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+    delete:
+      description: Delete currency
+      summary: Delete currency
+      operationId: DeleteCurrencyById
+      tags:
+        - geo
+      parameters:
+        - in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          title: id
+      responses:
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        204:
+          description: Currency deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+    patch:
+      description: Update currency
+      summary: Update currency
+      operationId: UpdateCurrencyById
+      tags:
+        - geo
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CurrencyUpdate'
+      responses:
+        200:
+          description: Currency updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+  /countries:
+    get:
+      description: Get all countries
+      operationId: GetCountries
+      tags:
+        - geo
+      responses:
+        200:
+          description: List of countries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Country'
+      summary: Get all countries
+    post:
+      description: Create a new country
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CountryCreateUpdate'
+      responses:
+        201:
+          description: Country created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Country'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+      summary: Create a new country
+      operationId: CreateCountry
+      tags:
+        - geo
+  /locations/search:
+    get:
+      description: Search locations
+      summary: Search locations
+      operationId: SearchLocations
+      tags:
+        - locations
+      parameters:
+        - title: search
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+  /users/me/config:
+    get:
+      description: Get user configuration settings
+      tags:
+        - users
+      responses:
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: User configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserConfig'
+      summary: Get user configuration
+      operationId: GetProfileConfig
+    patch:
+      description: Update user configuration settings
+      responses:
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        204:
+          description: Configuration updated successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+      summary: Update user configuration
+      operationId: UpdateProfileConfig
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserConfigUpdate'
+  /specializations:
+    get:
+      description: Get all specializations
+      summary: Get all specializations
+      operationId: GetSpecializations
+      tags:
+        - specializations
+      responses:
+        200:
+          description: List of specializations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Specialization'
+    post:
+      description: Create a new specialization
+      tags:
+        - specializations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecializationCreate'
+      responses:
+        201:
+          description: Specialization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Specialization'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+      summary: Create a new specialization
+      operationId: CreateSpecialization
+  /trainings:
+    get:
+      description: Get all trainings
+      operationId: GetTrainings
+      tags:
+        - trainings
+      responses:
+        200:
+          description: List of trainings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Training'
+      summary: Get all trainings
+    post:
+      description: Create a new training
+      operationId: CreateTraining
+      tags:
+        - trainings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingCreate'
+      responses:
+        201:
+          description: Training created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Training'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+      summary: Create a new training
+  /users/{id}:
+    get:
+      description: Get user by id
+      responses:
+        200:
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Get user by id
+      operationId: GetUserById
+      tags:
+        - users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+  /countries/{id}:
+    get:
+      description: Get country by id
+      summary: Get country by id
+      operationId: GetCountryById
+      tags:
+        - geo
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Country details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Country'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+    delete:
+      description: Delete country
+      parameters:
+        - in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          title: id
+      responses:
+        204:
+          description: Country deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Delete country
+      operationId: DeleteCountryById
+      tags:
+        - geo
+    patch:
+      description: Update country
+      tags:
+        - geo
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CountryCreateUpdate'
+      responses:
+        200:
+          description: Country updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Country'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Update country
+      operationId: UpdateCountryById
+  /users/me:
+    get:
+      description: Get current user
+      summary: Get current user
+      operationId: GetProfile
+      tags:
+        - users
+      responses:
+        200:
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserFull'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+    delete:
+      description: Delete current user
+      summary: Delete current user
+      operationId: DeleteProfile
+      tags:
+        - users
+      responses:
+        204:
+          description: User deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    patch:
+      description: Update current user
+      operationId: UpdateProfile
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        204:
+          description: User details updated successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Update current user
+  /currencies/search:
+    get:
+      description: Search currencies
+      tags:
+        - geo
+      parameters:
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of currencies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Currency'
+      summary: Search currencies
+      operationId: SearchCurrencies
+  /services/{id}:
+    get:
+      description: Get service by id
+      summary: Get service by id
+      operationId: GetServiceById
+      tags:
+        - usecases
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Service details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+    delete:
+      description: Delete service
+      summary: Delete service
+      operationId: DeleteService
+      tags:
+        - usecases
+      parameters:
+        - required: true
+          schema:
+            type: integer
+            format: int64
+          title: id
+          in: path
+      responses:
+        204:
+          description: Service deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    patch:
+      description: Update service details
+      tags:
+        - usecases
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceUpdate'
+      responses:
+        200:
+          description: Service updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Update service
+      operationId: UpdateService
+  /reviews/{review_id}/dislike:
+    post:
+      description: Dislike review
+      operationId: DislikeReviewById
+      tags:
+        - reviews
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Review disliked successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Dislike review
+  /locations/{id}:
+    get:
+      description: Get location by id
+      summary: Get location by id
+      operationId: GetLocationById
+      tags:
+        - locations
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - title: with-masters
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: Location details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+    delete:
+      description: Delete location
+      summary: Delete location
+      operationId: DeleteLocation
+      tags:
+        - locations
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        404:
+          $ref: '#/components/responses/404'
+        204:
+          description: Location deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+    patch:
+      description: Update location details
+      tags:
+        - locations
+      parameters:
+        - required: true
+          schema:
+            type: integer
+            format: int64
+          title: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdate'
+      responses:
+        200:
+          description: Location updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Update location
+      operationId: UpdateLocation
+  /reviews:
+    get:
+      description: Get all reviews
+      responses:
+        200:
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+      summary: Get all reviews
+      operationId: GetReviews
+      tags:
+        - reviews
+    post:
+      description: Create a new review
+      operationId: CreateReview
+      tags:
+        - reviews
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        201:
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Create a new review
+  /masters/{id}:
+    get:
+      description: Get master by id
+      summary: Get master by id
+      operationId: GetMasterById
+      tags:
+        - masters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        429:
+          $ref: '#/components/responses/429'
+        200:
+          description: Master details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Master'
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          $ref: '#/components/responses/404'
+  /locations/{id}/remove-master/{master_id}:
+    delete:
+      description: Remove master from location
+      summary: Remove master from location
+      operationId: RemoveMasterFromLocation
+      tags:
+        - locations
+      parameters:
+        - schema:
+            type: integer
+            format: int64
+          title: id
+          in: path
+          required: true
+        - title: master_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: Master removed from location successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        400:
+          $ref: '#/components/responses/400'
+  /locations:
+    get:
+      description: Get all locations
+      responses:
+        200:
+          description: List of locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+      summary: Get all locations
+      operationId: GetLocations
+      tags:
+        - locations
+    post:
+      description: Create a new location
+      summary: Create a new location
+      operationId: CreateLocation
+      tags:
+        - locations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationCreate'
+      responses:
+        201:
+          description: Location created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+  /cities/search:
+    get:
+      description: Search cities
+      tags:
+        - geo
+      parameters:
+        - title: search
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/City'
+      summary: Search cities
+      operationId: SearchCities
+  /masters/{id}/schedule/{schedule_id}:
+    delete:
+      description: Delete schedule
+      summary: Delete schedule
+      operationId: DeleteMasterSchedule
+      tags:
+        - masters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        204:
+          description: Schedule deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    patch:
+      description: Update schedule details
+      operationId: UpdateMasterSchedule
+      tags:
+        - masters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: schedule_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MasterScheduleUpdate'
+      responses:
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: Schedule updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterSchedule'
+        400:
+          $ref: '#/components/responses/400'
+      summary: Update schedule
+  /cities:
+    get:
+      description: Get all cities
+      operationId: GetCities
+      tags:
+        - geo
+      responses:
+        200:
+          description: List of cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/City'
+      summary: Get all cities
+    post:
+      description: Create a new city
+      responses:
+        201:
+          description: City created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/City'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+      summary: Create a new city
+      operationId: CreateCity
+      tags:
+        - geo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityCreateUpdate'
+  /reviews/{review_id}/answers/{answer_id}:
+    delete:
+      description: Delete review answer
+      summary: Delete review answer
+      operationId: DeleteReviewByIdAnswer
+      tags:
+        - reviews
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: answer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        204:
+          description: Answer deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    patch:
+      description: Update review answer
+      summary: Update review answer
+      operationId: UpdateReviewAnswerById
+      tags:
+        - reviews
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: answer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewAnswerUpdate'
+      responses:
+        200:
+          description: Answer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+  /locations/{id}/add-master/{master_id}:
+    post:
+      description: Add master to location
+      operationId: AddMasterToLocation
+      tags:
+        - locations
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          title: master_id
+      responses:
+        200:
+          description: Master added to location successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Add master to location
+  /login:
+    post:
+      description: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+        200:
+          description: User logged in successfully
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+      summary: Login
+      operationId: Login
+      tags:
+        - auth
+  /appointments/{id}:
+    get:
+      description: Get appointment by id
+      operationId: GetAppointmentById
+      tags:
+        - appointments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+        200:
+          description: Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+      summary: Get appointment by id
+    delete:
+      description: Delete appointment
+      operationId: DeleteAppointment
+      tags:
+        - appointments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        204:
+          description: Appointment deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+      summary: Delete appointment
+    patch:
+      description: Update appointment details
+      summary: Update appointment
+      operationId: UpdateAppointment
+      tags:
+        - appointments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentUpdate'
+      responses:
+        200:
+          description: Appointment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+  /specializations/{id}:
+    delete:
+      description: Delete specialization
+      tags:
+        - specializations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        404:
+          $ref: '#/components/responses/404'
+        204:
+          description: Specialization deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+      summary: Delete specialization
+      operationId: DeleteSpecializationById
+    patch:
+      description: Update specialization details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecializationUpdate'
+      responses:
+        200:
+          description: Specialization updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Specialization'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Update specialization
+      operationId: UpdateSpecializationById
+      tags:
+        - specializations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+  /languages/{id}:
+    get:
+      description: Get language by id
+      summary: Get language by id
+      operationId: GetLanguageById
+      tags:
+        - geo
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Language details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Language'
+    delete:
+      description: Delete language
+      summary: Delete language
+      operationId: DeleteLanguageById
+      tags:
+        - geo
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        204:
+          description: Language deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    patch:
+      description: Update language
+      summary: Update language
+      operationId: UpdateLanguageById
+      tags:
+        - geo
+      parameters:
+        - schema:
+            type: integer
+            format: int64
+          title: id
+          in: path
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LanguageCreateUpdate'
+      responses:
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: Language updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Language'
+        400:
+          $ref: '#/components/responses/400'
+  /reviews/{review_id}/answer:
+    post:
+      description: Add answer to review
+      summary: Add answer to review
+      operationId: AddReviewAnswerById
+      tags:
+        - reviews
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewAnswerCreate'
+      responses:
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        201:
+          description: Answer added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+  /appointments:
+    get:
+      description: Get all appointments
+      summary: Get all appointments
+      operationId: GetAppointments
+      tags:
+        - appointments
+      parameters:
+        - name: startDate
+          in: query
+          description: Start date in timestamptz
+          required: false
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          description: End date in timestamptz
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Appointment status
+          required: false
+          schema:
+            type: string
+            enum:
+              - created
+              - pending
+              - accepted
+              - rejected
+              - canceled
+              - completed
+              - rescheduled
+              - expired
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            format: int
+            minimum: 1
+        - name: limit
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            format: int
+            minimum: 1
+        - name: masterId
+          in: query
+          description: Master id to get only appointments for this master
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: userId
+          in: query
+          description: User id to get only appointments for this user
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AppointmentShort'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    post:
+      description: Create a new appointment
+      operationId: CreateAppointment
+      tags:
+        - appointments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+      responses:
+        201:
+          description: Appointment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Create a new appointment
+  /services:
+    get:
+      description: Get all usecases
+      summary: Get all usecases
+      operationId: GetServices
+      tags:
+        - usecases
+      responses:
+        200:
+          description: List of usecases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Service'
+    post:
+      description: Create a new service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCreate'
+      responses:
+        201:
+          description: Service created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+      summary: Create a new service
+      operationId: CreateService
+      tags:
+        - usecases
+  /masters/{id}/schedule:
+    get:
+      description: Get master schedule
+      summary: Get master schedule
+      operationId: GetMasterSchedule
+      tags:
+        - masters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: Master schedule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MasterSchedule'
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          $ref: '#/components/responses/404'
+    post:
+      description: Create master schedule
+      operationId: CreateMasterSchedule
+      tags:
+        - masters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MasterScheduleCreate'
+      responses:
+        201:
+          description: Schedule created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterSchedule'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Create master schedule
+  /appointments/waitlist/{id}:
+    get:
+      description: Get waiting list appointment by id
+      operationId: GetWaitingListAppointmentById
+      tags:
+        - appointments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: WaitingList appointment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+      summary: Get waiting list appointment by id
+    delete:
+      description: Delete waiting list appointment
+      summary: Delete waiting list appointment
+      operationId: DeleteWaitingListAppointment
+      tags:
+        - appointments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        404:
+          $ref: '#/components/responses/404'
+        204:
+          description: WaitingList appointment deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+    patch:
+      description: Update waiting list appointment details
+      summary: Update waiting list appointment
+      operationId: UpdateWaitingListAppointment
+      tags:
+        - appointments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentUpdate'
+      responses:
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: WaitingList appointment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+  /trainings/{id}:
+    get:
+      description: Get training by id
+      responses:
+        400:
+          $ref: '#/components/responses/400'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: Training details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Training'
+      summary: Get training by id
+      operationId: GetTrainingById
+      tags:
+        - trainings
+      parameters:
+        - title: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+    delete:
+      description: Delete specialization
+      summary: Delete specialization
+      operationId: DeleteSpecializationById
+      tags:
+        - specializations
+      parameters:
+        - in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          title: id
+      responses:
+        204:
+          description: Specialization deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    patch:
+      description: Update training details
+      parameters:
+        - required: true
+          schema:
+            type: integer
+            format: int64
+          title: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingUpdate'
+      responses:
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: Training updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Training'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+      summary: Update training
+      operationId: UpdateTrainingById
+      tags:
+        - trainings
+  /masters:
+    get:
+      description: Get all masters
+      summary: Get all masters
+      operationId: GetMasters
+      tags:
+        - masters
+      parameters:
+        - name: cityId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        400:
+          $ref: '#/components/responses/400'
+        429:
+          $ref: '#/components/responses/429'
+        200:
+          description: List of masters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MasterShort'
+    post:
+      description: Create a new master
+      tags:
+        - masters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MasterCreate'
+      responses:
+        401:
+          $ref: '#/components/responses/401'
+        201:
+          description: Master created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Master'
+        400:
+          $ref: '#/components/responses/400'
+      summary: Create a new master
+      operationId: CreateMaster
+  /logout:
+    post:
+      description: Logout
+      operationId: Logout
+      tags:
+        - auth
+      responses:
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+        201:
+          description: User logged out successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+      summary: Logout
+  /appointments/waitlist:
+    get:
+      description: Get appointments waiting list
+      tags:
+        - appointments
+      responses:
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: List of appointments in waiting list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appointment'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+      summary: Get appointments waiting list
+      operationId: GetAppointmentsWaitingList
+    post:
+      description: Add appointment to waiting list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+      responses:
+        201:
+          description: Appointment added to waiting list successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Add appointment to waiting list
+      operationId: AddAppointmentToWaitingList
+      tags:
+        - appointments
+  /reviews/{review_id}:
+    delete:
+      description: Delete review
+      tags:
+        - reviews
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        404:
+          $ref: '#/components/responses/404'
+        204:
+          description: Review deleted successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+      summary: Delete review
+      operationId: DeleteReviewById
+    patch:
+      description: Update review details
+      summary: Update review
+      operationId: UpdateReviewById
+      tags:
+        - reviews
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewUpdate'
+      responses:
+        200:
+          description: Review updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+  /appointments/{id}/status:
+    patch:
+      description: Update appointment status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentServiceUpdate'
+      responses:
+        404:
+          $ref: '#/components/responses/404'
+        204:
+          description: Appointment status updated successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+      summary: Update appointment status
+      operationId: UpdateAppointmentStatus
+      tags:
+        - appointments
+  /masters/me:
+    get:
+      description: Get current master
+      responses:
+        200:
+          description: Master details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Master'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Get current master
+      operationId: GetProfile
+      tags:
+        - masters
+    delete:
+      description: Delete master
+      operationId: DeleteMaster
+      tags:
+        - masters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        204:
+          description: Master deleted successfully
+      summary: Delete master
+    patch:
+      description: Update master details
+      tags:
+        - masters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MasterUpdate'
+      responses:
+        204:
+          description: Master updated successfully
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+      summary: Update master
+      operationId: UpdateMaster
+  /reviews/{review_id}/like:
+    post:
+      description: Like review
+      tags:
+        - reviews
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        401:
+          $ref: '#/components/responses/401'
+        404:
+          $ref: '#/components/responses/404'
+        200:
+          description: Review liked successfully
+        400:
+          $ref: '#/components/responses/400'
+      summary: Like review
+      operationId: LikeReviewById
+  /services/search:
+    get:
+      description: Search services
+      summary: Search services
+      operationId: SearchServices
+      tags:
+        - usecases
+      parameters:
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Service'
+  /languages/search:
+    get:
+      description: Search languages
+      responses:
+        200:
+          description: List of languages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Language'
+      summary: Search languages
+      operationId: SearchLanguages
+      tags:
+        - geo
+      parameters:
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+  /countries/search:
+    get:
+      description: Search countries
+      parameters:
+        - title: search
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of countries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Country'
+      summary: Search countries
+      operationId: SearchCountries
+      tags:
+        - geo
+components:
+  responses:
+    400:
+      description: Запрос не прошел валидацию
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            json:
+              $ref: '#/components/examples/BadRequest'
+    401:
+      description: Некорректный authorization токен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            json:
+              $ref: '#/components/examples/Unauthorized'
+    403:
+      description: Действие запрещено для пользователя
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            json:
+              $ref: '#/components/examples/Forbidden'
+    404:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            json:
+              $ref: '#/components/examples/NotFound'
+    500:
+      description: Ошибка системы
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            json:
+              $ref: '#/components/examples/InternalServerError'
+    429:
+      description: Ошибка количества запросов
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    AppointmentServiceCreate:
+      type: object
+      required:
+        - appointmentId
+        - masterServicesId
+      properties:
+        appointmentId:
+          type: integer
+          format: int64
+        masterServicesId:
+          type: integer
+          format: int64
+    MasterExperience:
+      type: object
+      required:
+        - masterId
+        - title
+        - startDate
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        masterId:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: YYYY
+        endDate:
+          type: string
+          format: YYYY
+    LocationCreate:
+      type: object
+      required:
+        - ownerId
+        - cityId
+        - title
+        - address
+        - latitude
+        - longitude
+        - hideOwner
+        - isActive
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+        cityId:
+          type: integer
+          format: int64
+        longitude:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+        howToGet:
+          type: string
+        hideOwner:
+          type: boolean
+        isActive:
+          type: boolean
+        ownerId:
+          type: integer
+          format: int64
+    Currency:
+      type: object
+      required:
+        - id
+        - title
+        - code
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        code:
+          type: string
+    UserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,email
+        firstName:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,alpha
+        lastName:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,alpha
+        birthDate:
+          type: string
+          example: DD-MM
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,ddmm
+        languageIds:
+          type: array
+          items:
+            type: integer
+            format: int
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,dive,number
+        middleName:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,alpha
+        phone:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,e164
+        whatsapp:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,e164
+        telegram:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,alphanum,startswith=@
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,oneof=MALE FEMALE OTHER
+        avatar:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty
+        cityId:
+          type: integer
+          format: int64
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,number
+        countryId:
+          type: integer
+          format: int64
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,number
+    Review:
+      type: object
+      required:
+        - id
+        - user
+        - master
+        - appointmentId
+        - appointmentStartTime
+        - rating
+        - content
+        - likes
+        - dislikes
+      properties:
+        id:
+          type: integer
+          format: int64
+        appointmentId:
+          type: integer
+          format: int64
+        appointmentStartTime:
+          type: string
+          format: date-time
+        rating:
+          type: number
+          format: float
+          maximum: 5
+          minimum: 0
+        answer:
+          type: string
+        master:
+          $ref: '#/components/schemas/MasterShort'
+        content:
+          type: string
+        isAnonymous:
+          type: boolean
+        likes:
+          type: integer
+          format: int64
+        dislikes:
+          type: integer
+          format: int64§
+        user:
+          $ref: '#/components/schemas/UserShort'
+    Specialization:
+      type: object
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+    MasterSupplyCreate:
+      type: object
+      required:
+        - masterId
+        - supplyTypeId
+        - title
+        - certificateUrl
+      properties:
+        title:
+          type: string
+        certificateUrl:
+          type: string
+        price:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+        masterId:
+          type: integer
+          format: int64
+        supplyTypeId:
+          type: integer
+          format: int64
+        descriptionShort:
+          type: string
+        descriptionLong:
+          type: string
+    MasterServiceCreate:
+      type: object
+      required:
+        - masterId
+        - serviceId
+        - priceFrom
+        - priceTo
+        - currency
+        - duration
+        - isActive
+      properties:
+        description:
+          type: string
+        duration:
+          type: integer
+          format: int
+        discountValue:
+          type: integer
+          format: int
+        discountVisibilityStartDate:
+          type: string
+          format: date-time
+        discountStartDate:
+          type: string
+          format: date-time
+        discountConditions:
+          type: string
+        discountVisibilityEndDate:
+          type: string
+          format: date-time
+        masterId:
+          type: integer
+          format: int64
+        serviceId:
+          type: integer
+          format: int64
+        isActive:
+          type: boolean
+        discountIsActive:
+          type: boolean
+        discountEndDate:
+          type: string
+          format: date-time
+        discountVisibilityType:
+          type: string
+          enum:
+            - EVERYONE
+            - SUBSCRIBERS
+        discountCountdown:
+          type: integer
+          format: int
+        discountIsPercentage:
+          type: boolean
+        priceFrom:
+          type: number
+          format: float
+        priceTo:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+    MasterLocationCreate:
+      type: object
+      required:
+        - masterId
+        - locationId
+      properties:
+        masterId:
+          type: integer
+          format: int64
+        locationId:
+          type: integer
+          format: int64
+    ServiceCreate:
+      type: object
+      required:
+        - title
+        - specialization_id
+      properties:
+        title:
+          type: string
+        specialization_id:
+          type: integer
+          format: int64
+    ServiceUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        specialization_id:
+          type: integer
+          format: int64
+    CurrencyUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        code:
+          type: string
+    MasterLanguageCreate:
+      type: object
+      required:
+        - masterId
+        - languageId
+        - proficiencyLevel
+      properties:
+        masterId:
+          type: integer
+          format: int64
+        languageId:
+          type: integer
+          format: int64
+        proficiencyLevel:
+          type: integer
+          format: int
+          description: Proficiency level of the language from 1 to 3 (Beginner, Intermediate, Advanced)
+    MasterSpecializationCreate:
+      type: object
+      required:
+        - masterId
+        - specializationId
+      properties:
+        masterId:
+          type: integer
+          format: int64
+        specializationId:
+          type: integer
+          format: int64
+    MasterDocument:
+      type: object
+      required:
+        - masterId
+        - documentType
+        - title
+        - fileUrl
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        documentType:
+          $ref: '#/components/schemas/DocumentType'
+        fileUrl:
+          type: string
+        masterId:
+          type: integer
+          format: int64
+    Language:
+      type: object
+      required:
+        - id
+        - title
+        - code
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        code:
+          type: string
+    User:
+      type: object
+      required:
+        - id
+        - firstName
+        - rating
+        - ratingCount
+      properties:
+        id:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+        middleName:
+          type: string
+        avatar:
+          type: string
+        city:
+          $ref: '#/components/schemas/City'
+        rating:
+          type: number
+          format: float
+          maximum: 5
+          minimum: 0
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Language'
+        ratingCount:
+          type: integer
+        birthDate:
+          type: string
+          example: DD-MM
+    TrainingCreate:
+      type: object
+      required:
+        - title
+        - masterId
+        - cityId
+        - startDate
+        - endDate
+        - price
+        - currencyId
+        - trainingType
+        - groupSize
+      properties:
+        title:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+        masterId:
+          type: integer
+          format: int64
+        cityId:
+          type: integer
+        startDate:
+          type: string
+          format: date-time
+        currencyId:
+          type: integer
+        isActive:
+          type: boolean
+        endDate:
+          type: string
+          format: date-time
+        price:
+          type: number
+          format: float
+        conditions:
+          type: string
+        trainingType:
+          type: string
+        groupSize:
+          type: integer
+          format: int
+    AppointmentServiceUpdate:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        priceTo:
+          type: number
+          format: float
+        discountValue:
+          type: number
+          format: float
+        discountInPercentage:
+          type: number
+          format: float
+        discountApplied:
+          type: boolean
+        priceFrom:
+          type: number
+          format: float
+    Master:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - avatar
+        - phone
+        - whatsapp
+        - telegram
+        - about
+        - isActive
+        - isVerified
+        - rating
+        - ratingCount
+        - masterCities
+        - masterLanguages
+        - masterLocations
+        - masterSpecializations
+        - masterServices
+        - masterDegrees
+        - masterExperiences
+        - masterDocuments
+        - masterSupplies
+        - masterGalleries
+        - masterSchedules
+      properties:
+        id:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        masterDegrees:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterDegree'
+        masterExperiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterExperience'
+        masterSupplies:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterSupply'
+        about:
+          type: string
+        masterCities:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterCity'
+        masterLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterLanguage'
+        masterLocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterLocation'
+        whatsapp:
+          type: string
+          maxLength: 20
+        rating:
+          type: number
+          format: float
+        isActive:
+          type: boolean
+        isVerified:
+          type: boolean
+        masterGalleries:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterGallery'
+        avatar:
+          type: string
+        phone:
+          type: string
+          maxLength: 20
+        ratingCount:
+          type: integer
+        masterDocuments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterDocument'
+        masterSchedules:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterSchedule'
+        middleName:
+          type: string
+        telegram:
+          type: string
+          maxLength: 20
+        masterSpecializations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterSpecialization'
+        masterServices:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterService'
+    CityCreateUpdate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+    ReviewUpdate:
+      type: object
+      properties:
+        isAnonymous:
+          type: boolean
+        rating:
+          type: number
+          format: float
+          maximum: 5
+          minimum: 0
+        content:
+          type: string
+    SpecializationUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+    MasterDegreeCreate:
+      type: object
+      required:
+        - masterId
+        - title
+        - startDate
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        endDate:
+          type: string
+          format: YYYY
+        masterId:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: YYYY
+    DocumentType:
+      type: object
+      required:
+        - title
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+    MasterTiny:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - avatar
+      properties:
+        id:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        middleName:
+          type: string
+        avatar:
+          type: string
+        rating:
+          type: number
+          format: float
+        masterCities:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterCity'
+        ratingCount:
+          type: integer
+        masterLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterLanguage'
+    MasterDocumentCreate:
+      type: object
+      required:
+        - masterId
+        - documentTypeId
+        - title
+        - fileUrl
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        masterId:
+          type: integer
+          format: int64
+        documentTypeId:
+          type: integer
+          format: int64
+        fileUrl:
+          type: string
+    MasterService:
+      type: object
+      required:
+        - masterId
+        - service
+        - priceFrom
+        - priceTo
+        - currency
+        - duration
+        - isActive
+      properties:
+        id:
+          type: integer
+          format: int64
+        description:
+          type: string
+        masterId:
+          type: integer
+          format: int64
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+        discountValue:
+          type: integer
+          format: int
+        discountStartDate:
+          type: string
+          format: date-time
+        discountEndDate:
+          type: string
+          format: date-time
+        service:
+          $ref: '#/components/schemas/Service'
+        priceFrom:
+          type: number
+          format: float
+        discountIsPercentage:
+          type: boolean
+        discountVisibilityType:
+          type: string
+          enum:
+            - EVERYONE
+            - SUBSCRIBERS
+        discountConditions:
+          type: string
+        priceTo:
+          type: number
+          format: float
+        duration:
+          type: integer
+          format: int
+        isActive:
+          type: boolean
+        discountCountdown:
+          type: integer
+          format: int
+        discountVisibilityStartDate:
+          type: string
+          format: date-time
+        discountVisibilityEndDate:
+          type: string
+          format: date-time
+        discountIsActive:
+          type: boolean
+    MasterShort:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - avatar
+        - rating
+        - ratingCount
+        - masterCities
+        - masterLanguages
+        - masterLocations
+        - masterSpecializations
+        - masterServices
+        - masterSchedules
+      properties:
+        id:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        rating:
+          type: number
+          format: float
+        isActive:
+          type: boolean
+          description: Admin only
+        telegram:
+          type: string
+          description: Admin only
+          maxLength: 20
+        masterCities:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterCity'
+        masterLocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterLocation'
+        masterSpecializations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterSpecialization'
+        masterServices:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterService'
+        avatar:
+          type: string
+        phone:
+          type: string
+          description: Admin only
+          maxLength: 20
+        ratingCount:
+          type: integer
+        isVerified:
+          type: boolean
+        masterLanguages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterLanguage'
+        masterSchedules:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterSchedule'
+        middleName:
+          type: string
+        whatsapp:
+          type: string
+          description: Admin only
+          maxLength: 20
+    ErrorResponse:
+      type: object
+      required:
+        - data
+        - error
+      properties:
+        data:
+          nullable: true
+          example: null
+          x-go-type-skip-optional-pointer: true
+        error:
+          description: possible errHandler
+          nullable: true
+          x-go-type-skip-optional-pointer: true
+        meta:
+          x-go-type-skip-optional-pointer: true
+    ReviewAnswerUpdate:
+      type: object
+      required:
+        - answer
+      properties:
+        answer:
+          type: string
+    MasterDegree:
+      type: object
+      required:
+        - masterId
+        - title
+        - startDate
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: YYYY
+        endDate:
+          type: string
+          format: YYYY
+        masterId:
+          type: integer
+          format: int64
+    Country:
+      type: object
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+    UserConfig:
+      type: object
+      required:
+        - notifications
+        - notificationBefore1h
+        - notificationBefore3h
+        - notificationBefore24h
+        - appLanguage
+        - timezone
+      properties:
+        notificationBefore3h:
+          type: boolean
+        notificationBefore24h:
+          type: boolean
+        appLanguage:
+          type: string
+        timezone:
+          type: string
+        notifications:
+          type: object
+          properties:
+            email:
+              type: boolean
+            push:
+              type: boolean
+        notificationBefore1h:
+          type: boolean
+    AppointmentShort:
+      type: object
+      required:
+        - id
+        - user
+        - master
+        - city
+        - location
+        - startTime
+        - endTime
+        - totalPrice
+        - currency
+        - totalDuration
+        - status
+        - hasReview
+      properties:
+        id:
+          type: integer
+          format: int64
+        city:
+          $ref: '#/components/schemas/City'
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+        totalDuration:
+          type: integer
+          description: Total duration of the appointment in minutes
+        status:
+          type: string
+          enum:
+            - created
+            - pending
+            - accepted
+            - rejected
+            - canceled
+            - completed
+            - rescheduled
+            - expired
+        waitList:
+          type: boolean
+          description: Whether the appointment is in the wait list
+        user:
+          $ref: '#/components/schemas/UserShort'
+        master:
+          $ref: '#/components/schemas/MasterTiny'
+        location:
+          $ref: '#/components/schemas/Location'
+        totalPrice:
+          type: number
+          format: float
+        hasReview:
+          type: boolean
+    AppointmentUpdate:
+      type: object
+      properties:
+        notes:
+          type: string
+        waitList:
+          type: boolean
+          description: Whether the appointment is in the wait list
+        status:
+          type: string
+          enum:
+            - pending
+            - accepted
+            - declined
+            - canceled
+            - completed
+        statusReason:
+          type: string
+          description: Reason for the appointment status
+        totalPrice:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+        totalDuration:
+          type: integer
+          description: Total duration of the appointment in minutes
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+    LanguageCreateUpdate:
+      type: object
+      required:
+        - title
+        - code
+      properties:
+        title:
+          type: string
+        code:
+          type: string
+    Appointment:
+      type: object
+      required:
+        - id
+        - user
+        - master
+        - services
+        - city
+        - location
+        - startTime
+        - endTime
+        - totalPrice
+        - currency
+        - totalDuration
+        - status
+        - hasReview
+      properties:
+        id:
+          type: integer
+          format: int64
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointmentService'
+        totalPrice:
+          type: number
+          format: float
+        user:
+          $ref: '#/components/schemas/UserShort'
+        location:
+          $ref: '#/components/schemas/Location'
+        endTime:
+          type: string
+          format: date-time
+        statusReason:
+          type: string
+          description: Reason for the appointment status
+        notes:
+          type: string
+          description: Additional notes for the appointment
+        master:
+          $ref: '#/components/schemas/MasterTiny'
+        startTime:
+          type: string
+          format: date-time
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+        waitList:
+          type: boolean
+          description: Whether the appointment is in the wait list
+        hasReview:
+          type: boolean
+        city:
+          $ref: '#/components/schemas/City'
+        totalDuration:
+          type: integer
+          description: Total duration of the appointment in minutes
+        status:
+          type: string
+          enum:
+            - created
+            - pending
+            - accepted
+            - rejected
+            - canceled
+            - completed
+            - rescheduled
+            - expired
+    CountryCreateUpdate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+    MasterExperienceCreate:
+      type: object
+      required:
+        - masterId
+        - title
+        - startDate
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        masterId:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: YYYY
+        endDate:
+          type: string
+          format: YYYY
+    MasterSpecialization:
+      type: object
+      required:
+        - masterId
+        - specialization
+      properties:
+        id:
+          type: integer
+          format: int64
+        specialization:
+          $ref: '#/components/schemas/Specialization'
+        masterId:
+          type: integer
+          format: int64
+    SupplyType:
+      type: object
+      required:
+        - title
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+    LocationUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        ownerId:
+          type: integer
+          format: int64
+        longitude:
+          type: number
+          format: double
+        hideOwner:
+          type: boolean
+        isActive:
+          type: boolean
+        address:
+          type: string
+        latitude:
+          type: number
+          format: double
+        howToGet:
+          type: string
+    Service:
+      type: object
+      required:
+        - id
+        - title
+        - specialization
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        specialization:
+          $ref: '#/components/schemas/Specialization'
+    SuccessResponse:
+      type: object
+      required:
+        - data
+        - error
+      properties:
+        data:
+          description: relevant data
+          nullable: true
+          x-go-type-skip-optional-pointer: true
+        error:
+          description: possible errHandler
+          nullable: true
+          x-go-type-skip-optional-pointer: true
+        meta:
+          description: additional meta data
+          x-go-type-skip-optional-pointer: true
+    DocumentTypeCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+    MasterCreate:
+      type: object
+      required:
+        - userId
+        - firstName
+        - phone
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        whatsapp:
+          type: string
+          maxLength: 20
+        telegram:
+          type: string
+          maxLength: 20
+        about:
+          type: string
+        userId:
+          type: integer
+          format: int64
+        middleName:
+          type: string
+        phone:
+          type: string
+          maxLength: 20
+    Location:
+      type: object
+      required:
+        - id
+        - title
+        - address
+        - city
+        - coordinates
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        city:
+          $ref: '#/components/schemas/City'
+        coordinates:
+          type: object
+          properties:
+            latitude:
+              type: number
+              format: float
+            longitude:
+              type: number
+              format: float
+        hideOwner:
+          type: boolean
+        address:
+          type: string
+        howToGet:
+          type: string
+        isActive:
+          type: boolean
+        owner:
+          $ref: '#/components/schemas/User'
+    UserFull:
+      type: object
+      required:
+        - id
+        - firstName
+        - rating
+        - ratingCount
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        whatsapp:
+          type: string
+        telegram:
+          type: string
+        country:
+          $ref: '#/components/schemas/Country'
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Language'
+        city:
+          $ref: '#/components/schemas/City'
+        ratingCount:
+          type: integer
+        isMaster:
+          type: boolean
+          default: false
+        birthDate:
+          type: string
+          example: DD-MM
+        middleName:
+          type: string
+        avatar:
+          type: string
+        rating:
+          type: number
+          format: float
+          maximum: 5
+          minimum: 0
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+    Training:
+      type: object
+      required:
+        - id
+        - title
+        - master
+        - city
+        - startDate
+        - endDate
+        - price
+        - currency
+        - conditions
+        - trainingType
+        - groupSize
+        - currentGroupSize
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        endDate:
+          type: string
+          pattern: ^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$
+          example: 07-05-2025
+        price:
+          type: number
+          format: float
+        conditions:
+          type: string
+        trainingType:
+          type: string
+        startDate:
+          type: string
+          pattern: ^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$
+          example: 07-05-2025
+        currency:
+          $ref: '#/components/schemas/Currency'
+        groupSize:
+          type: integer
+          format: int
+        currentGroupSize:
+          type: integer
+          format: int
+        isActive:
+          type: boolean
+          description: Status for owner only
+        master:
+          $ref: '#/components/schemas/Master'
+        city:
+          $ref: '#/components/schemas/City'
+    CurrencyCreate:
+      type: object
+      required:
+        - title
+        - code
+      properties:
+        title:
+          type: string
+        code:
+          type: string
+    City:
+      type: object
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+    MasterSchedule:
+      type: object
+      required:
+        - masterId
+        - day
+        - startTime
+        - endTime
+      properties:
+        id:
+          type: integer
+          format: int64
+        endTime:
+          type: string
+          format: time
+        masterId:
+          type: integer
+          format: int64
+        location:
+          $ref: '#/components/schemas/Location'
+        day:
+          type: string
+          enum:
+            - MON
+            - TUE
+            - WED
+            - THU
+            - FRI
+            - SAT
+            - SUN
+        startTime:
+          type: string
+          format: time
+    MasterSupply:
+      type: object
+      required:
+        - masterId
+        - supplyType
+        - title
+        - certificateUrl
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        masterId:
+          type: integer
+          format: int64
+        descriptionShort:
+          type: string
+        descriptionLong:
+          type: string
+        certificateUrl:
+          type: string
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+        supplyType:
+          $ref: '#/components/schemas/SupplyType'
+        price:
+          type: number
+          format: float
+    InvalidParam:
+      type: object
+      required:
+        - name
+        - reason
+      properties:
+        name:
+          type: string
+        reason:
+          type: string
+    TrainingUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        price:
+          type: number
+          format: float
+        currencyId:
+          type: integer
+        trainingType:
+          type: string
+        currentGroupSize:
+          type: integer
+          format: int
+        conditions:
+          type: string
+        groupSize:
+          type: integer
+          format: int
+    AppointmentCreate:
+      type: object
+      required:
+        - masterId
+        - cityId
+        - locationId
+        - startTime
+        - endTime
+        - totalPrice
+        - currency
+        - totalDuration
+        - status
+        - waitList
+        - notes
+      properties:
+        cityId:
+          type: integer
+          format: int64
+        locationId:
+          type: integer
+          format: int64
+        totalPrice:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+        totalDuration:
+          type: integer
+          description: Total duration of the appointment in minutes
+        status:
+          type: string
+          enum:
+            - created
+            - pending
+            - accepted
+            - rejected
+            - canceled
+            - completed
+            - rescheduled
+            - expired
+        waitList:
+          type: boolean
+          description: Whether the appointment is in the wait list
+        notes:
+          type: string
+          description: Additional notes for the appointment
+        userId:
+          type: integer
+          format: int64
+        masterId:
+          type: integer
+          format: int64
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+    AppointmentStatusUpdate:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+            - pending
+            - accepted
+            - declined
+            - canceled
+            - completed
+        statusReason:
+          type: string
+          description: Reason for the appointment status
+    MasterGalleryCreate:
+      type: object
+      required:
+        - masterId
+        - specializationId
+        - serviceId
+        - imageUrl
+        - sortOrder
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        serviceId:
+          type: integer
+          format: int64
+        imageUrl:
+          type: string
+        sortOrder:
+          type: integer
+          format: int
+        masterId:
+          type: integer
+          format: int64
+        specializationId:
+          type: integer
+          format: int64
+    MasterLanguage:
+      type: object
+      required:
+        - masterId
+        - languageId
+        - proficiencyLevel
+      properties:
+        id:
+          type: integer
+          format: int64
+        masterId:
+          type: integer
+          format: int64
+        languageId:
+          type: integer
+          format: int64
+        proficiencyLevel:
+          type: integer
+          format: int
+          description: Proficiency level of the language from 1 to 3 (Beginner, Intermediate, Advanced)
+    UserCreate:
+      type: object
+      required:
+        - firstName
+        - phone
+      properties:
+        firstName:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: required,alpha
+        lastName:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,alpha
+        middleName:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,alpha
+        phone:
+          type: string
+          maxLength: 20
+          x-oapi-codegen-extra-tags:
+            validate: required,e164
+    SpecializationCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+    AppointmentService:
+      type: object
+      required:
+        - id
+        - title
+        - duration
+        - priceFrom
+        - priceTo
+        - currency
+        - discountValue
+        - discountInPercentage
+        - discountApplied
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        priceFrom:
+          type: number
+          format: float
+        priceTo:
+          type: number
+          format: float
+        discountApplied:
+          type: boolean
+        duration:
+          type: integer
+        currency:
+          type: string
+          enum:
+            - RUB
+            - USD
+            - EUR
+        discountValue:
+          type: number
+          format: float
+        discountInPercentage:
+          type: number
+          format: float
+    MasterLocation:
+      type: object
+      required:
+        - masterId
+        - locationId
+      properties:
+        id:
+          type: integer
+          format: int64
+        locationId:
+          type: integer
+          format: int64
+        masterId:
+          type: integer
+          format: int64
+    Error:
+      type: object
+      required:
+        - slug
+        - title
+      properties:
+        title:
+          type: string
+          description: Описание ошибки
+        slug:
+          type: string
+          description: Читабельный тип ошибки
+        message:
+          type: string
+          description: Дополнительная информация об ошибке
+          x-go-type-skip-optional-pointer: true
+        invalid-params:
+          type: array
+          description: Информация об ошибке валидации
+          items:
+            $ref: '#/components/schemas/InvalidParam'
+          x-go-type-skip-optional-pointer: true
+    UserShort:
+      type: object
+      required:
+        - id
+        - firstName
+        - rating
+        - ratingCount
+      properties:
+        id:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+        language:
+          $ref: '#/components/schemas/Language'
+        ratingCount:
+          type: integer
+        rating:
+          type: number
+          format: float
+        middleName:
+          type: string
+        city:
+          $ref: '#/components/schemas/City'
+        avatar:
+          type: string
+    SupplyTypeCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+    ReviewActiveStatus:
+      type: object
+      required:
+        - isActive
+      properties:
+        isActive:
+          type: boolean
+    MasterGallery:
+      type: object
+      required:
+        - masterId
+        - specialization
+        - service
+        - imageUrl
+        - sortOrder
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+          format: int
+        masterId:
+          type: integer
+          format: int64
+        specialization:
+          $ref: '#/components/schemas/Specialization'
+        service:
+          $ref: '#/components/schemas/Service'
+        imageUrl:
+          type: string
+    MasterCityCreate:
+      type: object
+      required:
+        - masterId
+        - cityId
+      properties:
+        cityId:
+          type: integer
+          format: int64
+        masterId:
+          type: integer
+          format: int64
+    MasterUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        about:
+          type: string
+        cities:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterCityCreate'
+        degrees:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterDegreeCreate'
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterExperienceCreate'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterDocumentCreate'
+        phone:
+          type: string
+          maxLength: 20
+        telegram:
+          type: string
+          maxLength: 20
+        isActive:
+          type: boolean
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterLocationCreate'
+        languages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterLanguageCreate'
+        specializations:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterSpecializationCreate'
+        gallery:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterGalleryCreate'
+        whatsapp:
+          type: string
+          maxLength: 20
+        avatar:
+          type: string
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterServiceCreate'
+        supplies:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterSupplyCreate'
+        middleName:
+          type: string
+    ReviewAnswerCreate:
+      type: object
+      required:
+        - answer
+      properties:
+        answer:
+          type: string
+    MasterCity:
+      type: object
+      required:
+        - masterId
+        - city
+      properties:
+        id:
+          type: integer
+          format: int64
+        masterId:
+          type: integer
+          format: int64
+        city:
+          $ref: '#/components/schemas/City'
+    Login:
+      type: object
+      required:
+        - phone
+        - password
+      properties:
+        password:
+          type: string
+        phone:
+          type: string
+    UserConfigUpdate:
+      type: object
+      properties:
+        appLanguage:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,alpha
+        timezone:
+          type: string
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,timezone
+        notifications:
+          type: object
+          properties:
+            email:
+              type: boolean
+              x-oapi-codegen-extra-tags:
+                validate: omitempty,boolean
+            push:
+              type: boolean
+              x-oapi-codegen-extra-tags:
+                validate: omitempty,boolean
+        notificationBefore1h:
+          type: boolean
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,boolean
+        notificationBefore3h:
+          type: boolean
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,boolean
+        notificationBefore24h:
+          type: boolean
+          x-oapi-codegen-extra-tags:
+            validate: omitempty,boolean
+    ReviewCreate:
+      type: object
+      required:
+        - userId
+        - masterId
+        - appointmentId
+        - rating
+        - content
+        - isAnonymous
+      properties:
+        userId:
+          type: integer
+          format: int64
+        masterId:
+          type: integer
+          format: int64
+        appointmentId:
+          type: integer
+          format: int64
+        appointmentStartTime:
+          type: string
+          format: date-time
+        rating:
+          type: number
+          format: float
+          maximum: 5
+          minimum: 0
+        content:
+          type: string
+        isAnonymous:
+          type: boolean
+  examples:
+    BadRequest:
+      summary: Bad request
+      value:
+        error:
+          title: Validation failed.
+          invalid-params:
+            - name: param1
+              reason: must be positive
+          slug: validation-errHandler
+    Unauthorized:
+      summary: Unauthorized
+      value:
+        error:
+          slug: unauthorized
+          title: The request has not been applied because it lacks valid authentication credentials for the target resource.
+    Forbidden:
+      summary: Access denied
+      value:
+        error:
+          slug: forbidden
+          title: The server understood the request but refuses to authorize it.
+    NotFound:
+      summary: Object not found
+      value:
+        error:
+          slug: not-found
+          title: Object not available or not exists.
+    InternalServerError:
+      summary: Internal server errHandler
+      value:
+        error:
+          slug: internal-server-errHandler
+          title: Internal server errHandler.
+security:
+  - bearerAuth: []
+tags:
+  - description: Operations about authentication
+    name: auth
+  - description: Operations about users
+    name: users
+  - description: Operations about masters
+    name: masters
+  - name: reviews
+    description: Operations about reviews
+  - description: Operations about services
+    name: services
+  - name: specializations
+    description: Operations about specializations
+  - description: Operations about appointments
+    name: appointments
+  - name: locations
+    description: Operations about locations
+  - name: geo
+    description: Operations about geo
+  - name: trainings
+    description: Operations about loyalties
+  - name: notifications
+    description: Operations about notifications

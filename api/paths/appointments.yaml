@@ -1,0 +1,641 @@
+appointments:
+  get:
+    summary: Get all appointments
+    description: Get all appointments
+    operationId: GetAppointments
+    tags:
+      - appointments
+    parameters:
+      - name: startDate
+        description: Start date in timestamptz
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: endDate
+        description: End date in timestamptz
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        description: Appointment status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [created, pending, accepted, rejected, canceled, completed, rescheduled, expired]
+      - name: page
+        description: Page number
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int
+          minimum: 1
+      - name: limit
+        description: Number of items per page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int
+          minimum: 1
+      - name: masterId
+        description: Master id to get only appointments for this master
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: userId
+        description: User id to get only appointments for this user
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '200':
+        description: List of appointments
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AppointmentShort'
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+  post:
+    summary: Create a new appointment
+    description: Create a new appointment
+    operationId: CreateAppointment
+    tags:
+      - appointments
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppointmentCreate'
+    responses:
+      '201':
+        description: Appointment created successfully
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+appointment-by-id:
+  get:
+    summary: Get appointment by id
+    description: Get appointment by id
+    operationId: GetAppointmentById
+    tags:
+      - appointments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '200':
+        description: Appointment details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+      '500':
+        $ref: '../components/responses.yaml#/components/responses/500'
+  patch:
+    summary: Update appointment
+    description: Update appointment details
+    operationId: UpdateAppointment
+    tags:
+      - appointments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppointmentUpdate'
+    responses:
+      '200':
+        description: Appointment updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+      '500':
+        $ref: '../components/responses.yaml#/components/responses/500'
+  delete:
+    summary: Delete appointment
+    description: Delete appointment
+    operationId: DeleteAppointment
+    tags:
+      - appointments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '204':
+        description: Appointment deleted successfully
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+      '500':
+        $ref: '../components/responses.yaml#/components/responses/500'
+appointment-by-id-status:
+  patch:
+    summary: Update appointment status
+    description: Update appointment status
+    operationId: UpdateAppointmentStatus
+    tags:
+      - appointments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppointmentServiceUpdate'
+    responses:
+      '204':
+        description: Appointment status updated successfully
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+appointments-waitinglist:
+  get:
+    summary: Get appointments waiting list
+    description: Get appointments waiting list
+    operationId: GetAppointmentsWaitingList
+    tags:
+      - appointments
+    responses:
+      '200':
+        description: List of appointments in waiting list
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Appointment'
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+  post:
+    summary: Add appointment to waiting list
+    description: Add appointment to waiting list
+    operationId: AddAppointmentToWaitingList
+    tags:
+      - appointments
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppointmentCreate'
+    responses:
+      '201':
+        description: Appointment added to waiting list successfully
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+appointments-waitinglist-by-id:
+  get:
+    summary: Get waiting list appointment by id
+    description: Get waiting list appointment by id
+    operationId: GetWaitingListAppointmentById
+    tags:
+      - appointments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '200':
+        description: WaitingList appointment details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+  patch:
+    summary: Update waiting list appointment
+    description: Update waiting list appointment details
+    operationId: UpdateWaitingListAppointment
+    tags:
+      - appointments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppointmentUpdate'
+    responses:
+      '200':
+        description: WaitingList appointment updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+  delete:
+    summary: Delete waiting list appointment
+    description: Delete waiting list appointment
+    operationId: DeleteWaitingListAppointment
+    tags:
+      - appointments
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '204':
+        description: WaitingList appointment deleted successfully
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+
+components:
+  schemas:
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user:
+          $ref: './users.yaml#/components/schemas/UserShort'
+        master:
+          $ref: './masters.yaml#/components/schemas/MasterTiny'
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointmentService'
+        city:
+          $ref: './geo.yaml#/components/schemas/City'
+        location:
+          $ref: './locations.yaml#/components/schemas/Location'
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        totalPrice:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum: [RUB, USD, EUR]
+        totalDuration:
+          type: integer
+          description: Total duration of the appointment in minutes
+        status:
+          type: string
+          enum: [created, pending, accepted, rejected, canceled, completed, rescheduled, expired]
+        statusReason:
+          type: string
+          description: Reason for the appointment status
+        waitList:
+          type: boolean
+          description: Whether the appointment is in the wait list
+        notes:
+          type: string
+          description: Additional notes for the appointment
+        hasReview:
+          type: boolean
+      required:
+        - id
+        - user
+        - master
+        - services
+        - city
+        - location
+        - startTime
+        - endTime
+        - totalPrice
+        - currency
+        - totalDuration
+        - status
+        - hasReview
+    AppointmentShort:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user:
+          $ref: './users.yaml#/components/schemas/UserShort'
+        master:
+          $ref: './masters.yaml#/components/schemas/MasterTiny'
+        city:
+          $ref: './geo.yaml#/components/schemas/City'
+        location:
+          $ref: './locations.yaml#/components/schemas/Location'
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        totalPrice:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum: [RUB, USD, EUR]
+        totalDuration:
+          type: integer
+          description: Total duration of the appointment in minutes
+        status:
+          type: string
+          enum: [created, pending, accepted, rejected, canceled, completed, rescheduled, expired]
+        waitList:
+          type: boolean
+          description: Whether the appointment is in the wait list
+        hasReview:
+          type: boolean
+      required:
+        - id
+        - user
+        - master
+        - city
+        - location
+        - startTime
+        - endTime
+        - totalPrice
+        - currency
+        - totalDuration
+        - status
+        - hasReview
+    AppointmentCreate:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        masterId:
+          type: integer
+          format: int64
+        cityId:
+          type: integer
+          format: int64
+        locationId:
+          type: integer
+          format: int64
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        totalPrice:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum: [RUB, USD, EUR]
+        totalDuration:
+          type: integer
+          description: Total duration of the appointment in minutes
+        status:
+          type: string
+          enum: [created, pending, accepted, rejected, canceled, completed, rescheduled, expired]
+        waitList:
+          type: boolean
+          description: Whether the appointment is in the wait list
+        notes:
+          type: string
+          description: Additional notes for the appointment
+      required:
+        - masterId
+        - cityId
+        - locationId
+        - startTime
+        - endTime
+        - totalPrice
+        - currency
+        - totalDuration
+        - status
+        - waitList
+        - notes
+    AppointmentUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, accepted, declined, canceled, completed]
+        statusReason:
+          type: string
+          description: Reason for the appointment status
+        totalPrice:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum: [RUB, USD, EUR]
+        totalDuration:
+          type: integer
+          description: Total duration of the appointment in minutes
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        waitList:
+          type: boolean
+          description: Whether the appointment is in the wait list
+    AppointmentStatusUpdate:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [pending, accepted, declined, canceled, completed]
+        statusReason:
+          type: string
+          description: Reason for the appointment status
+      required:
+        - id
+        - status
+    AppointmentServiceCreate:
+      type: object
+      properties:
+        appointmentId:
+          type: integer
+          format: int64
+        masterServicesId:
+          type: integer
+          format: int64
+      required:
+        - appointmentId
+        - masterServicesId
+    AppointmentService:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        duration:
+          type: integer
+        priceFrom:
+          type: number
+          format: float
+        priceTo:
+          type: number
+          format: float
+        currency:
+          type: string
+          enum: [RUB, USD, EUR]
+        discountValue:
+          type: number
+          format: float
+        discountInPercentage:
+          type: number
+          format: float
+        discountApplied:
+          type: boolean
+      required:
+        - id
+        - title
+        - duration
+        - priceFrom
+        - priceTo
+        - currency
+        - discountValue
+        - discountInPercentage
+        - discountApplied
+    AppointmentServiceUpdate:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        priceFrom:
+          type: number
+          format: float
+        priceTo:
+          type: number
+          format: float
+        discountValue:
+          type: number
+          format: float
+        discountInPercentage:
+          type: number
+          format: float
+        discountApplied:
+          type: boolean

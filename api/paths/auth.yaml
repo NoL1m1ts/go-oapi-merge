@@ -1,0 +1,63 @@
+login:
+  post:
+    summary: Login
+    description: Login
+    operationId: Login
+    tags: [auth]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Login'
+    responses:
+      '200':
+        headers:
+          Location:
+            required: true
+            schema:
+              type: string
+        description: User logged in successfully
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+      '500':
+        $ref: '../components/responses.yaml#/components/responses/500'
+
+logout:
+  post:
+    summary: Logout
+    description: Logout
+    operationId: Logout
+    tags: [auth]
+    responses:
+      '201':
+        description: User logged out successfully
+      '400':
+        $ref: '../components/responses.yaml#/components/responses/400'
+      '401':
+        $ref: '../components/responses.yaml#/components/responses/401'
+      '403':
+        $ref: '../components/responses.yaml#/components/responses/403'
+      '404':
+        $ref: '../components/responses.yaml#/components/responses/404'
+      '500':
+        $ref: '../components/responses.yaml#/components/responses/500'
+
+components:
+  schemas:
+    Login:
+      type: object
+      required:
+        - phone
+        - password
+      properties:
+        phone:
+          type: string
+        password:
+          type: string

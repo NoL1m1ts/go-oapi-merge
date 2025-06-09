@@ -1,0 +1,178 @@
+openapi: 3.0.0
+info:
+  title: Name of project
+  version: 1.0.0
+  description: API for our project
+
+servers:
+  - url: http://localhost:8080/api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+    description: Operations about authentication
+  - name: users
+    description: Operations about users
+  - name: masters
+    description: Operations about masters
+  - name: reviews
+    description: Operations about reviews
+  - name: services
+    description: Operations about services
+  - name: specializations
+    description: Operations about specializations
+  - name: appointments
+    description: Operations about appointments
+  - name: locations
+    description: Operations about locations
+  - name: geo
+    description: Operations about geo
+  - name: trainings
+    description: Operations about loyalties
+  - name: notifications
+    description: Operations about notifications
+
+paths:
+#  /images/upload: # post
+#    $ref: './paths/upload.yaml#/upload'
+#  /documents/upload: # post
+#    $ref: './paths/upload.yaml#/upload'
+#  /health: # get
+#    $ref: './paths/health.yaml#/health'
+
+# auth
+  /login: # post
+    $ref: './paths/auth.yaml#/login'
+  /logout: # post
+    $ref: './paths/auth.yaml#/logout'
+
+# users +
+  /users: # get!admin post
+    $ref: './paths/users.yaml#/users'
+  /users/{id}: # get
+    $ref: './paths/users.yaml#/users-by-id'
+  /users/me: # get patch delete !
+    $ref: './paths/users.yaml#/users-me'
+  /users/me/config: # get patch
+    $ref: './paths/users.yaml#/users-me-config'
+#  /me/favorites: # get post delete
+#    $ref: './paths/users.yaml#/users-by-id-favorites'
+#  /me/favorites/{master_id}: # post delete
+#    $ref: './paths/users.yaml#/users-by-id-favorites-master-id'
+#  /me/blocks: # get
+#    $ref: './paths/users.yaml#/users-by-id-blocks'
+#  /me/blocks/{master_id}: # post delete
+#    $ref: './paths/users.yaml#/users-by-id-blocks-master-id'
+
+# masters
+  /masters: # get post
+    $ref: './paths/masters.yaml#/masters'
+  /masters/{id}: # get /me patch delete
+    $ref: './paths/masters.yaml#/master-by-id'
+  /masters/me:
+    $ref: './paths/masters.yaml#/master-me'
+  /masters/{id}/schedule: # get post
+    $ref: './paths/masters.yaml#/master-by-id-schedule'
+  /masters/{id}/schedule/{schedule_id}: # get patch delete
+    $ref: './paths/masters.yaml#/master-by-id-schedule-by-id'
+
+
+# reviews +
+  /reviews: # get post
+    $ref: './paths/reviews.yaml#/reviews'
+  /reviews/{review_id}: # get patch delete
+    $ref: './paths/reviews.yaml#/review-by-id'
+  /reviews/{review_id}/answer: # post
+    $ref: './paths/reviews.yaml#/review-by-id-answer'
+  /reviews/{review_id}/answers/{answer_id}: # patch delete
+    $ref: './paths/reviews.yaml#/review-by-id-answer-by-id'
+  /reviews/{review_id}/like: # post
+    $ref: './paths/reviews.yaml#/review-by-id-like'
+  /reviews/{review_id}/dislike: # post
+    $ref: './paths/reviews.yaml#/review-by-id-dislike'
+  /reviews/{review_id}/activatation: # post!
+    $ref: './paths/reviews.yaml#/review-by-id-activate'
+
+# services +
+  /services: # get post
+    $ref: './paths/services.yaml#/services'
+  /services/{id}: # get patch delete
+    $ref: './paths/services.yaml#/service-by-id'
+  /services/search: # get
+    $ref: './paths/services.yaml#/services-search'
+
+# specializations +
+  /specializations: # get post
+    $ref: './paths/specializations.yaml#/specializations'
+  /specializations/{id}: # get patch delete
+    $ref: './paths/specializations.yaml#/specialization-by-id'
+
+# appointments +
+  /appointments: # get // post rbac self
+    $ref: './paths/appointments.yaml#/appointments'
+  /appointments/{id}: # get // patch delete rbac self
+    $ref: './paths/appointments.yaml#/appointment-by-id'
+  /appointments/{id}/status: # patch
+    $ref: './paths/appointments.yaml#/appointment-by-id-status'
+  /appointments/waitlist: # get post
+    $ref: './paths/appointments.yaml#/appointments-waitinglist'
+  /appointments/waitlist/{id}: # get patch delete
+    $ref: './paths/appointments.yaml#/appointments-waitinglist-by-id'
+
+# locations +
+  /locations: # get // post rbac self
+    $ref: './paths/locations.yaml#/locations'
+  /locations/search: # get
+    $ref: './paths/locations.yaml#/locations-search'
+  /locations/{id}: # get // patch delete rbac self
+    $ref: './paths/locations.yaml#/location-by-id'
+  /locations/{id}/add-master/{master_id}: # get rbac self
+    $ref: './paths/locations.yaml#/location-by-id-add-master'
+  /locations/{id}/remove-master/{master_id}: # get rbac self
+    $ref: './paths/locations.yaml#/location-by-id-remove-master'
+
+# geo +
+  /countries: # get search // post rbac self
+    $ref: './paths/geo.yaml#/countries'
+  /countries/search: # get
+    $ref: './paths/geo.yaml#/countries-search'
+  /countries/{id}: # get update delete
+    $ref: './paths/geo.yaml#/country-by-id'
+  /cities: # get search // post rbac self
+    $ref: './paths/geo.yaml#/cities'
+  /cities/search: # get
+    $ref: './paths/geo.yaml#/cities-search'
+  /cities/{id}: # get update delete
+    $ref: './paths/geo.yaml#/city-by-id'
+  /languages: # get // post rbac self
+    $ref: './paths/geo.yaml#/languages'
+  /languages/{id}: # get update delete
+    $ref: './paths/geo.yaml#/languages-by-id'
+  /languages/search: # get
+    $ref: './paths/geo.yaml#/languages-search'
+  /currencies: # get // post rbac self
+    $ref: './paths/geo.yaml#/currencies'
+  /currencies/{id}: # get update delete
+    $ref: './paths/geo.yaml#/currency-by-id'
+  /currencies/search: # get
+    $ref: './paths/geo.yaml#/currencies-search'
+
+# trainings +
+  /trainings: # get // post rbac self
+    $ref: './paths/trainings.yaml#/trainings'
+  /trainings/{id}: # get // patch delete rbac self
+    $ref: './paths/trainings.yaml#/training-by-id'
+
+  # /notifications: # get // post rbac self
+  #   $ref: './paths/notifications.yaml#/notifications'
+  # /notifications/{id}: # get // patch delete rbac self
+  #   $ref: './paths/notifications.yaml#/notifications-by-id'
