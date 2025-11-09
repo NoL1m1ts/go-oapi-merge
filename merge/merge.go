@@ -19,19 +19,27 @@ type MergeError struct {
 }
 
 func (e *MergeError) Error() string {
-	if e.File != "" && e.Path != "" {
-		if e.Line > 0 {
-			return fmt.Sprintf("%s (in %s at %s, line %d)", e.Message, e.File, e.Path, e.Line)
-		}
-		return fmt.Sprintf("%s (in %s at %s)", e.Message, e.File, e.Path)
-	}
+	var b strings.Builder
+	b.WriteString(e.Message)
+
 	if e.File != "" {
-		if e.Line > 0 {
-			return fmt.Sprintf("%s (in %s, line %d)", e.Message, e.File, e.Line)
+		b.WriteString(" (in ")
+		b.WriteString(e.File)
+
+		if e.Path != "" {
+			b.WriteString(" at ")
+			b.WriteString(e.Path)
 		}
-		return fmt.Sprintf("%s (in %s)", e.Message, e.File)
+
+		if e.Line > 0 {
+			b.WriteString(", line ")
+			b.WriteString(fmt.Sprintf("%d", e.Line))
+		}
+
+		b.WriteString(")")
 	}
-	return e.Message
+
+	return b.String()
 }
 
 func (e *MergeError) Unwrap() error {
@@ -60,36 +68,59 @@ type OpenAPI struct {
 // Returns:
 //   - error: Any error that occurred during merging
 func OapiYaml(inputFile, outputFile string) error {
-	// Read the source file as a YAML node to preserve field order
+	// Load and parse the OpenAPI specification
+	rootNode, mainAPI, err := loadAndParseOpenAPI(inputFile)
+	if err != nil {
+		return err
+	}
+
+	// Validate the OpenAPI structure
+	if err := validateOpenAPI(&mainAPI, inputFile); err != nil {
+		return err
+	}
+
+	// Process references and merge external files
+	if err := processReferences(rootNode, &mainAPI, inputFile); err != nil {
+		return err
+	}
+
+	// Write the merged specification to output file
+	return writeYAMLToFile(&mainAPI, outputFile)
+}
+
+// loadAndParseOpenAPI reads and parses an OpenAPI YAML file
+func loadAndParseOpenAPI(inputFile string) (*yaml.Node, OpenAPI, error) {
 	rootNode, err := readYAMLNode(inputFile)
 	if err != nil {
-		return &MergeError{
+		return nil, OpenAPI{}, &MergeError{
 			File:    inputFile,
 			Message: "Failed to read input file",
 			Cause:   err,
 		}
 	}
 
-	// Convert YAML node to OpenAPI structure for processing
 	var mainAPI OpenAPI
 	if err := rootNode.Decode(&mainAPI); err != nil {
-		return &MergeError{
+		return nil, OpenAPI{}, &MergeError{
 			File:    inputFile,
 			Message: "Invalid OpenAPI YAML structure",
 			Cause:   err,
 		}
 	}
 
-	// Validate OpenAPI version
-	if mainAPI.OpenAPI == "" {
+	return rootNode, mainAPI, nil
+}
+
+// validateOpenAPI validates the OpenAPI specification structure
+func validateOpenAPI(api *OpenAPI, inputFile string) error {
+	if api.OpenAPI == "" {
 		return &MergeError{
 			File:    inputFile,
 			Message: "Missing required field 'openapi' (version number)",
 		}
 	}
 
-	// Validate info section
-	if mainAPI.Info == nil {
+	if api.Info == nil {
 		return &MergeError{
 			File:    inputFile,
 			Message: "Missing required field 'info' section",
@@ -97,11 +128,15 @@ func OapiYaml(inputFile, outputFile string) error {
 	}
 
 	// Initialize components if they are missing
-	if mainAPI.Components == nil {
-		mainAPI.Components = make(map[string]interface{})
+	if api.Components == nil {
+		api.Components = make(map[string]interface{})
 	}
 
-	// Find paths node safely
+	return nil
+}
+
+// processReferences processes all references in the OpenAPI specification
+func processReferences(rootNode *yaml.Node, mainAPI *OpenAPI, inputFile string) error {
 	pathsNode, err := findPathsNode(rootNode)
 	if err != nil {
 		return &MergeError{
@@ -111,18 +146,20 @@ func OapiYaml(inputFile, outputFile string) error {
 		}
 	}
 
-	// Process paths and collect references to external files
 	urlsToParse := make(map[string]bool)
 	if err := processPaths(pathsNode, mainAPI.Paths, urlsToParse, inputFile); err != nil {
-		return err // Already wrapped with context
+		return err
 	}
 
-	// Process all external file references
-	if err := processNestedFiles(urlsToParse, &mainAPI); err != nil {
+	if err := processNestedFiles(urlsToParse, mainAPI); err != nil {
 		return fmt.Errorf("failed to process nested files: %v", err)
 	}
 
-	// Create a new YAML node for output with preserved field order
+	return nil
+}
+
+// writeYAMLToFile writes the OpenAPI specification to a YAML file
+func writeYAMLToFile(api *OpenAPI, outputFile string) error {
 	outputNode := &yaml.Node{
 		Kind: yaml.DocumentNode,
 		Content: []*yaml.Node{
@@ -132,12 +169,10 @@ func OapiYaml(inputFile, outputFile string) error {
 		},
 	}
 
-	// Encode OpenAPI structure back to YAML while preserving field order
-	if err := encodeOpenAPI(outputNode.Content[0], mainAPI); err != nil {
+	if err := encodeOpenAPI(outputNode.Content[0], *api); err != nil {
 		return fmt.Errorf("failed to encode OpenAPI: %v", err)
 	}
 
-	// Write the result to a file
 	f, err := os.Create(outputFile)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %v", err)
