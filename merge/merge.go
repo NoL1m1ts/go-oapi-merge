@@ -9,6 +9,35 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// MergeError represents a detailed error that occurred during the merge process
+type MergeError struct {
+	File    string // File where the error occurred
+	Path    string // JSON path or OpenAPI path (e.g., "/users", "#/components/schemas/User")
+	Line    int    // Line number in the file (if available)
+	Message string // Human-readable error message
+	Cause   error  // Original error
+}
+
+func (e *MergeError) Error() string {
+	if e.File != "" && e.Path != "" {
+		if e.Line > 0 {
+			return fmt.Sprintf("%s (in %s at %s, line %d)", e.Message, e.File, e.Path, e.Line)
+		}
+		return fmt.Sprintf("%s (in %s at %s)", e.Message, e.File, e.Path)
+	}
+	if e.File != "" {
+		if e.Line > 0 {
+			return fmt.Sprintf("%s (in %s, line %d)", e.Message, e.File, e.Line)
+		}
+		return fmt.Sprintf("%s (in %s)", e.Message, e.File)
+	}
+	return e.Message
+}
+
+func (e *MergeError) Unwrap() error {
+	return e.Cause
+}
+
 // OpenAPI represents the structure of the OpenAPI specification documents.
 // It contains all the main sections of the OpenAPI documents according to the specification.
 type OpenAPI struct {
@@ -34,13 +63,37 @@ func OapiYaml(inputFile, outputFile string) error {
 	// Read the source file as a YAML node to preserve field order
 	rootNode, err := readYAMLNode(inputFile)
 	if err != nil {
-		return fmt.Errorf("failed to read input YAML: %v", err)
+		return &MergeError{
+			File:    inputFile,
+			Message: "Failed to read input file",
+			Cause:   err,
+		}
 	}
 
 	// Convert YAML node to OpenAPI structure for processing
 	var mainAPI OpenAPI
 	if err := rootNode.Decode(&mainAPI); err != nil {
-		return fmt.Errorf("failed to decode YAML: %v", err)
+		return &MergeError{
+			File:    inputFile,
+			Message: "Invalid OpenAPI YAML structure",
+			Cause:   err,
+		}
+	}
+
+	// Validate OpenAPI version
+	if mainAPI.OpenAPI == "" {
+		return &MergeError{
+			File:    inputFile,
+			Message: "Missing required field 'openapi' (version number)",
+		}
+	}
+
+	// Validate info section
+	if mainAPI.Info == nil {
+		return &MergeError{
+			File:    inputFile,
+			Message: "Missing required field 'info' section",
+		}
 	}
 
 	// Initialize components if they are missing
@@ -48,10 +101,20 @@ func OapiYaml(inputFile, outputFile string) error {
 		mainAPI.Components = make(map[string]interface{})
 	}
 
+	// Find paths node safely
+	pathsNode, err := findPathsNode(rootNode)
+	if err != nil {
+		return &MergeError{
+			File:    inputFile,
+			Message: "Failed to locate 'paths' section in OpenAPI document",
+			Cause:   err,
+		}
+	}
+
 	// Process paths and collect references to external files
 	urlsToParse := make(map[string]bool)
-	if err := processPaths(rootNode.Content[0].Content[3].Content[1], mainAPI.Paths, urlsToParse, inputFile); err != nil {
-		return fmt.Errorf("failed to process paths: %v", err)
+	if err := processPaths(pathsNode, mainAPI.Paths, urlsToParse, inputFile); err != nil {
+		return err // Already wrapped with context
 	}
 
 	// Process all external file references
@@ -638,6 +701,31 @@ func processOperation(operationNode *yaml.Node, operation map[string]interface{}
 	return nil
 }
 
+// findPathsNode safely locates the paths node in the OpenAPI YAML structure
+func findPathsNode(rootNode *yaml.Node) (*yaml.Node, error) {
+	// Validate root node structure
+	if rootNode == nil || len(rootNode.Content) == 0 {
+		return nil, fmt.Errorf("root node is empty")
+	}
+
+	docNode := rootNode.Content[0]
+	if docNode.Kind != yaml.MappingNode {
+		return nil, fmt.Errorf("expected document to be a mapping, got %v", docNode.Kind)
+	}
+
+	// Find the 'paths' key in the document
+	for i := 0; i < len(docNode.Content)-1; i += 2 {
+		keyNode := docNode.Content[i]
+		valueNode := docNode.Content[i+1]
+
+		if keyNode.Value == "paths" {
+			return valueNode, nil
+		}
+	}
+
+	return nil, fmt.Errorf("'paths' field not found in OpenAPI document")
+}
+
 // readYAMLNode reads a YAML file and returns its root node.
 // This preserves the structure and order of the original YAML document.
 //
@@ -650,12 +738,12 @@ func processOperation(operationNode *yaml.Node, operation map[string]interface{}
 func readYAMLNode(filePath string) (*yaml.Node, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file '%s': %v", filePath, err)
+		return nil, fmt.Errorf("file not found or cannot be read: %v", err)
 	}
 
 	var rootNode yaml.Node
 	if err := yaml.Unmarshal(data, &rootNode); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal YAML: %v", err)
+		return nil, fmt.Errorf("invalid YAML syntax: %v", err)
 	}
 
 	return &rootNode, nil
@@ -708,7 +796,11 @@ func processPaths(pathsNode *yaml.Node, paths map[string]interface{}, urlsToPars
 		// Get the reference string
 		refStr, ok := refValue.(string)
 		if !ok {
-			return fmt.Errorf("invalid reference format for path '%s': expected string, got %T", pathKey, refValue)
+			return &MergeError{
+				File:    currentFilePath,
+				Path:    pathKey,
+				Message: fmt.Sprintf("Invalid $ref type: expected string, got %T. The $ref value must be a string like './file.yaml#/path'", refValue),
+			}
 		}
 
 		// If it's a reference to an internal component, save as is
@@ -720,7 +812,12 @@ func processPaths(pathsNode *yaml.Node, paths map[string]interface{}, urlsToPars
 		// Resolve the reference path
 		refPath, err := resolveRef(refStr, currentFilePath)
 		if err != nil {
-			return fmt.Errorf("failed to resolve reference for path '%s': %v", pathKey, err)
+			return &MergeError{
+				File:    currentFilePath,
+				Path:    pathKey,
+				Message: fmt.Sprintf("Failed to resolve $ref '%s'", refStr),
+				Cause:   err,
+			}
 		}
 
 		// Add the file to the list for processing
@@ -729,7 +826,11 @@ func processPaths(pathsNode *yaml.Node, paths map[string]interface{}, urlsToPars
 		// Split the reference into parts: file and internal path
 		parts := strings.SplitN(refStr, "#", 2)
 		if len(parts) < 2 {
-			return fmt.Errorf("invalid reference format for path '%s': missing fragment in '%s'", pathKey, refStr)
+			return &MergeError{
+				File:    currentFilePath,
+				Path:    pathKey,
+				Message: fmt.Sprintf("Invalid $ref format '%s': missing fragment (the part after #). Expected format: './file.yaml#/path/to/resource'", refStr),
+			}
 		}
 
 		// Get the fragment (part after #)
@@ -741,13 +842,22 @@ func processPaths(pathsNode *yaml.Node, paths map[string]interface{}, urlsToPars
 		// Read the YAML file referenced by the reference
 		data, err := os.ReadFile(refPath)
 		if err != nil {
-			return fmt.Errorf("failed to read YAML file '%s': %v", refPath, err)
+			return &MergeError{
+				File:    currentFilePath,
+				Path:    pathKey,
+				Message: fmt.Sprintf("Cannot read referenced file '%s' (from $ref '%s'). Make sure the file exists and the path is correct", refPath, refStr),
+				Cause:   err,
+			}
 		}
 
 		// Parse the YAML content
 		var nested map[string]interface{}
 		if err := yaml.Unmarshal(data, &nested); err != nil {
-			return fmt.Errorf("failed to unmarshal YAML file '%s': %v", refPath, err)
+			return &MergeError{
+				File:    refPath,
+				Message: fmt.Sprintf("Invalid YAML syntax in referenced file (referenced from %s at path %s)", currentFilePath, pathKey),
+				Cause:   err,
+			}
 		}
 
 		// Split the fragment into path parts
@@ -755,33 +865,59 @@ func processPaths(pathsNode *yaml.Node, paths map[string]interface{}, urlsToPars
 
 		// Follow the fragment path sequentially
 		var current interface{} = nested
+		currentPath := ""
 		for _, part := range fragmentParts {
 			if part == "" {
 				continue
 			}
 
+			currentPath += "/" + part
+
 			// Convert the current node to a map
 			currentMap, ok := current.(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("invalid reference path for path '%s': expected map at '%s', got %T", pathKey, fragment, current)
+				return &MergeError{
+					File:    refPath,
+					Path:    currentPath,
+					Message: fmt.Sprintf("Invalid reference structure: expected object at '%s', but got %T. Referenced from %s at path %s with $ref '%s'", currentPath, current, currentFilePath, pathKey, refStr),
+				}
 			}
 
 			// Get the next node along the path
-			current, ok = currentMap[part]
-			if !ok {
-				return fmt.Errorf("invalid reference path for path '%s': key '%s' not found at '%s'", pathKey, part, fragment)
+			var exists bool
+			current, exists = currentMap[part]
+			if !exists {
+				// Provide helpful error message with available keys
+				availableKeys := make([]string, 0, len(currentMap))
+				for k := range currentMap {
+					availableKeys = append(availableKeys, k)
+				}
+				return &MergeError{
+					File:    refPath,
+					Path:    currentPath,
+					Message: fmt.Sprintf("Key '%s' not found at path '%s'. Referenced from %s at path %s with $ref '%s'. Available keys at this level: %v", part, currentPath, currentFilePath, pathKey, refStr, availableKeys),
+				}
 			}
 		}
 
 		// Convert the found node to a map
 		resolvedPathItem, ok := current.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("invalid reference target for path '%s': expected map, got %T", pathKey, current)
+			return &MergeError{
+				File:    refPath,
+				Path:    fragment,
+				Message: fmt.Sprintf("Invalid reference target: expected object at '%s', but got %T. Referenced from %s at path %s with $ref '%s'", fragment, current, currentFilePath, pathKey, refStr),
+			}
 		}
 
 		// Process any nested references in the resolved path item
 		if err := findRef(resolvedPathItem, urlsToParse, refPath); err != nil {
-			return fmt.Errorf("failed to process nested references: %v", err)
+			return &MergeError{
+				File:    refPath,
+				Path:    fragment,
+				Message: fmt.Sprintf("Failed to process nested references (referenced from %s at path %s)", currentFilePath, pathKey),
+				Cause:   err,
+			}
 		}
 
 		// Save the resolved path

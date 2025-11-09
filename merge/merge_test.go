@@ -133,7 +133,7 @@ func TestOapiYamlErrors(t *testing.T) {
 	t.Run("invalid input file", func(t *testing.T) {
 		err := OapiYaml("nonexistent.yaml", "output.yaml")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to read input YAML")
+		assert.Contains(t, err.Error(), "Failed to read input file")
 	})
 
 	t.Run("invalid output path", func(t *testing.T) {
