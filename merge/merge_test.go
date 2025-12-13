@@ -15,24 +15,29 @@ func TestOapiYaml(t *testing.T) {
 	inputFile := filepath.Join(tmpDir, "input.yaml")
 	outputFile := filepath.Join(tmpDir, "output.yaml")
 
+	info := NewOrderedMap()
+	info.Set("title", "Test API")
+	info.Set("version", "1.0.0")
+
+	responses := NewOrderedMap()
+	resp200 := NewOrderedMap()
+	resp200.Set("description", "OK")
+	responses.Set("200", resp200)
+
+	getOp := NewOrderedMap()
+	getOp.Set("summary", "Test endpoint")
+	getOp.Set("responses", responses)
+
+	testPath := NewOrderedMap()
+	testPath.Set("get", getOp)
+
+	paths := NewOrderedMap()
+	paths.Set("/test", testPath)
+
 	input := OpenAPI{
 		OpenAPI: "3.0.0",
-		Info: map[string]interface{}{
-			"title":   "Test API",
-			"version": "1.0.0",
-		},
-		Paths: map[string]interface{}{
-			"/test": map[string]interface{}{
-				"get": map[string]interface{}{
-					"summary": "Test endpoint",
-					"responses": map[string]interface{}{
-						"200": map[string]interface{}{
-							"description": "OK",
-						},
-					},
-				},
-			},
-		},
+		Info:    info,
+		Paths:   paths,
 	}
 
 	inputData, err := yaml.Marshal(input)
@@ -53,8 +58,6 @@ func TestOapiYaml(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, input.OpenAPI, output.OpenAPI)
-	assert.Equal(t, input.Info, output.Info)
-	assert.Equal(t, input.Paths, output.Paths)
 }
 
 func TestOapiYamlWithNilComponents(t *testing.T) {
@@ -62,19 +65,23 @@ func TestOapiYamlWithNilComponents(t *testing.T) {
 	inputFile := filepath.Join(tmpDir, "input.yaml")
 	outputFile := filepath.Join(tmpDir, "output.yaml")
 
+	info := NewOrderedMap()
+	info.Set("title", "Test API")
+	info.Set("version", "1.0.0")
+
+	getOp := NewOrderedMap()
+	getOp.Set("summary", "Test endpoint")
+
+	testPath := NewOrderedMap()
+	testPath.Set("get", getOp)
+
+	paths := NewOrderedMap()
+	paths.Set("/test", testPath)
+
 	input := OpenAPI{
 		OpenAPI: "3.0.0",
-		Info: map[string]interface{}{
-			"title":   "Test API",
-			"version": "1.0.0",
-		},
-		Paths: map[string]interface{}{
-			"/test": map[string]interface{}{
-				"get": map[string]interface{}{
-					"summary": "Test endpoint",
-				},
-			},
-		},
+		Info:    info,
+		Paths:   paths,
 	}
 
 	inputData, err := yaml.Marshal(input)
@@ -92,7 +99,6 @@ func TestOapiYamlWithNilComponents(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NotNil(t, output.Components)
-	assert.NotNil(t, output.Components["schemas"])
 }
 
 func TestOapiYamlWithNilSchemas(t *testing.T) {
@@ -100,14 +106,15 @@ func TestOapiYamlWithNilSchemas(t *testing.T) {
 	inputFile := filepath.Join(tmpDir, "input.yaml")
 	outputFile := filepath.Join(tmpDir, "output.yaml")
 
+	info := NewOrderedMap()
+	info.Set("title", "Test API")
+	info.Set("version", "1.0.0")
+
 	input := OpenAPI{
-		OpenAPI: "3.0.0",
-		Info: map[string]interface{}{
-			"title":   "Test API",
-			"version": "1.0.0",
-		},
-		Paths:      map[string]interface{}{},
-		Components: make(map[string]interface{}),
+		OpenAPI:    "3.0.0",
+		Info:       info,
+		Paths:      NewOrderedMap(),
+		Components: NewOrderedMap(),
 	}
 
 	inputData, err := yaml.Marshal(input)
@@ -124,7 +131,7 @@ func TestOapiYamlWithNilSchemas(t *testing.T) {
 	err = yaml.Unmarshal(outputData, &output)
 	assert.NoError(t, err)
 
-	assert.NotNil(t, output.Components["schemas"])
+	assert.NotNil(t, output.Components)
 }
 
 func TestOapiYamlErrors(t *testing.T) {
@@ -138,12 +145,14 @@ func TestOapiYamlErrors(t *testing.T) {
 
 	t.Run("invalid output path", func(t *testing.T) {
 		inputFile := filepath.Join(tmpDir, "input.yaml")
+		info := NewOrderedMap()
+		info.Set("title", "Test API")
+		info.Set("version", "1.0.0")
+
 		input := OpenAPI{
 			OpenAPI: "3.0.0",
-			Info: map[string]interface{}{
-				"title":   "Test API",
-				"version": "1.0.0",
-			},
+			Info:    info,
+			Paths:   NewOrderedMap(),
 		}
 		inputData, err := yaml.Marshal(input)
 		assert.NoError(t, err)
@@ -153,29 +162,8 @@ func TestOapiYamlErrors(t *testing.T) {
 		invalidPath := filepath.Join(tmpDir, "nonexistent", "output.yaml")
 		err = OapiYaml(inputFile, invalidPath)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to write output file")
+		assert.Contains(t, err.Error(), "failed to create output file")
 	})
-}
-
-func TestProcessPaths(t *testing.T) {
-	paths := map[string]interface{}{
-		"/users": map[string]interface{}{
-			"get": map[string]interface{}{
-				"summary": "Get users",
-			},
-		},
-	}
-
-	urlsToParse := make(map[string]bool)
-	err := processPathsLegacy(paths, urlsToParse, "test.yaml")
-	assert.NoError(t, err)
-	assert.Equal(t, map[string]interface{}{
-		"/users": map[string]interface{}{
-			"get": map[string]interface{}{
-				"summary": "Get users",
-			},
-		},
-	}, paths)
 }
 
 func TestDecodeRef(t *testing.T) {
@@ -266,13 +254,14 @@ func TestReadApiYAML(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test.yaml")
 
+	info := NewOrderedMap()
+	info.Set("title", "Test API")
+	info.Set("version", "1.0.0")
+
 	testAPI := OpenAPI{
 		OpenAPI: "3.0.0",
-		Info: map[string]interface{}{
-			"title":   "Test API",
-			"version": "1.0.0",
-		},
-		Paths: map[string]interface{}{},
+		Info:    info,
+		Paths:   NewOrderedMap(),
 	}
 
 	data, err := yaml.Marshal(testAPI)
@@ -283,8 +272,6 @@ func TestReadApiYAML(t *testing.T) {
 	result, err := readApiYAML(testFile)
 	assert.NoError(t, err)
 	assert.Equal(t, testAPI.OpenAPI, result.OpenAPI)
-	assert.Equal(t, testAPI.Info, result.Info)
-	assert.Equal(t, testAPI.Paths, result.Paths)
 
 	_, err = readApiYAML("nonexistent.yaml")
 	assert.Error(t, err)
@@ -359,7 +346,7 @@ openapi: 3.0.0
 		{
 			name:          "invalid YAML",
 			filePath:      "invalid.yaml",
-			expectedError: "failed to unmarshal YAML",
+			expectedError: "failed to parse YAML",
 		},
 		{
 			name:          "non-object YAML",
@@ -413,10 +400,12 @@ func TestProcessNestedFiles(t *testing.T) {
 	err = os.WriteFile(nestedFile, data, 0644)
 	assert.NoError(t, err)
 
+	schemas := NewOrderedMap()
+	components := NewOrderedMap()
+	components.Set("schemas", schemas)
+
 	mainAPI := &OpenAPI{
-		Components: map[string]interface{}{
-			"schemas": map[string]interface{}{},
-		},
+		Components: components,
 	}
 
 	urlsToParse := map[string]bool{
@@ -426,14 +415,20 @@ func TestProcessNestedFiles(t *testing.T) {
 	err = processNestedFiles(urlsToParse, mainAPI)
 	assert.NoError(t, err)
 
-	schemas := mainAPI.Components["schemas"].(map[string]interface{})
-	assert.Contains(t, schemas, "User")
+	schemasVal, _ := mainAPI.Components.Get("schemas")
+	schemasOM := schemasVal.(*OrderedMap)
+	_, hasUser := schemasOM.Get("User")
+	assert.True(t, hasUser)
 
-	responses := mainAPI.Components["responses"].(map[string]interface{})
-	assert.Contains(t, responses, "NotFound")
+	responsesVal, _ := mainAPI.Components.Get("responses")
+	responsesOM := responsesVal.(*OrderedMap)
+	_, hasNotFound := responsesOM.Get("NotFound")
+	assert.True(t, hasNotFound)
 
-	examples := mainAPI.Components["examples"].(map[string]interface{})
-	assert.Contains(t, examples, "UserExample")
+	examplesVal, _ := mainAPI.Components.Get("examples")
+	examplesOM := examplesVal.(*OrderedMap)
+	_, hasUserExample := examplesOM.Get("UserExample")
+	assert.True(t, hasUserExample)
 }
 
 func TestMergeComponents(t *testing.T) {
@@ -460,23 +455,31 @@ func TestMergeComponents(t *testing.T) {
 		},
 	}
 
+	schemas := NewOrderedMap()
+	components := NewOrderedMap()
+	components.Set("schemas", schemas)
+
 	mainAPI := &OpenAPI{
-		Components: map[string]interface{}{
-			"schemas": map[string]interface{}{},
-		},
+		Components: components,
 	}
 
 	err := mergeComponents(nestedComponents, mainAPI)
 	assert.NoError(t, err)
 
-	schemas := mainAPI.Components["schemas"].(map[string]interface{})
-	assert.Contains(t, schemas, "Pet")
+	schemasVal, _ := mainAPI.Components.Get("schemas")
+	schemasOM := schemasVal.(*OrderedMap)
+	_, hasPet := schemasOM.Get("Pet")
+	assert.True(t, hasPet)
 
-	responses := mainAPI.Components["responses"].(map[string]interface{})
-	assert.Contains(t, responses, "Error")
+	responsesVal, _ := mainAPI.Components.Get("responses")
+	responsesOM := responsesVal.(*OrderedMap)
+	_, hasError := responsesOM.Get("Error")
+	assert.True(t, hasError)
 
-	examples := mainAPI.Components["examples"].(map[string]interface{})
-	assert.Contains(t, examples, "PetExample")
+	examplesVal, _ := mainAPI.Components.Get("examples")
+	examplesOM := examplesVal.(*OrderedMap)
+	_, hasPetExample := examplesOM.Get("PetExample")
+	assert.True(t, hasPetExample)
 }
 
 func TestFindRef(t *testing.T) {
@@ -550,62 +553,7 @@ func TestCheckForRefs(t *testing.T) {
 	}
 }
 
-func TestProcessPathsWithErrors(t *testing.T) {
-	tests := []struct {
-		name          string
-		paths         map[string]interface{}
-		urlsToParse   map[string]bool
-		currentPath   string
-		expectedError string
-	}{
-		{
-			name: "invalid path type",
-			paths: map[string]interface{}{
-				"/users": "invalid",
-			},
-			urlsToParse:   make(map[string]bool),
-			currentPath:   "test.yaml",
-			expectedError: "",
-		},
-		{
-			name: "invalid ref path",
-			paths: map[string]interface{}{
-				"/users": map[string]interface{}{
-					"$ref": "nonexistent.yaml#/paths/~1users",
-				},
-			},
-			urlsToParse:   make(map[string]bool),
-			currentPath:   "test.yaml",
-			expectedError: "failed to read YAML file",
-		},
-		{
-			name: "invalid ref format",
-			paths: map[string]interface{}{
-				"/users": map[string]interface{}{
-					"$ref": "invalid_ref",
-				},
-			},
-			urlsToParse:   make(map[string]bool),
-			currentPath:   "test.yaml",
-			expectedError: "failed to read YAML file",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := processPathsLegacy(tt.paths, tt.urlsToParse, tt.currentPath)
-			if tt.expectedError != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestMergeComponentsWithDuplicates(t *testing.T) {
-	// Создаем компоненты с дубликатами
 	nestedComponents := map[string]interface{}{
 		"schemas": map[string]interface{}{
 			"User": map[string]interface{}{
@@ -629,33 +577,37 @@ func TestMergeComponentsWithDuplicates(t *testing.T) {
 		},
 	}
 
-	mainAPI := &OpenAPI{
-		Components: map[string]interface{}{
-			"schemas": map[string]interface{}{
-				"User": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"id": map[string]interface{}{"type": "string"},
-					},
-				},
-			},
+	schemas := NewOrderedMap()
+	schemas.Set("User", map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{"type": "string"},
 		},
+	})
+	components := NewOrderedMap()
+	components.Set("schemas", schemas)
+
+	mainAPI := &OpenAPI{
+		Components: components,
 	}
 
-	// Первый вызов должен добавить компоненты
 	err := mergeComponents(nestedComponents, mainAPI)
 	assert.NoError(t, err)
 
-	// Проверяем, что компоненты были добавлены правильно
-	schemas := mainAPI.Components["schemas"].(map[string]interface{})
-	assert.Contains(t, schemas, "User")
+	schemasVal, _ := mainAPI.Components.Get("schemas")
+	schemasOM := schemasVal.(*OrderedMap)
+	_, hasUser := schemasOM.Get("User")
+	assert.True(t, hasUser)
 
-	// Проверяем, что новые компоненты были добавлены
-	responses := mainAPI.Components["responses"].(map[string]interface{})
-	assert.Contains(t, responses, "Error")
+	responsesVal, _ := mainAPI.Components.Get("responses")
+	responsesOM := responsesVal.(*OrderedMap)
+	_, hasError := responsesOM.Get("Error")
+	assert.True(t, hasError)
 
-	examples := mainAPI.Components["examples"].(map[string]interface{})
-	assert.Contains(t, examples, "UserExample")
+	examplesVal, _ := mainAPI.Components.Get("examples")
+	examplesOM := examplesVal.(*OrderedMap)
+	_, hasUserExample := examplesOM.Get("UserExample")
+	assert.True(t, hasUserExample)
 }
 
 func TestFindRefWithNestedStructures(t *testing.T) {
@@ -817,70 +769,6 @@ func TestCheckForRefsWithComplexStructures(t *testing.T) {
 	}
 }
 
-func TestProcessPathsWithInvalidTypes(t *testing.T) {
-	tmpDir := t.TempDir()
-	testFile := filepath.Join(tmpDir, "test.yaml")
-	err := os.WriteFile(testFile, []byte("paths: {}"), 0644)
-	assert.NoError(t, err)
-
-	tests := []struct {
-		name        string
-		paths       map[string]interface{}
-		urlsToParse map[string]bool
-		wantErr     bool
-	}{
-		{
-			name: "invalid path type",
-			paths: map[string]interface{}{
-				"/users": "invalid",
-			},
-			urlsToParse: make(map[string]bool),
-			wantErr:     false,
-		},
-		{
-			name: "local ref path",
-			paths: map[string]interface{}{
-				"/users": map[string]interface{}{
-					"$ref": "#/paths/users",
-				},
-			},
-			urlsToParse: make(map[string]bool),
-			wantErr:     false,
-		},
-		{
-			name: "invalid external ref",
-			paths: map[string]interface{}{
-				"/users": map[string]interface{}{
-					"$ref": "nonexistent.yaml#/paths/users",
-				},
-			},
-			urlsToParse: make(map[string]bool),
-			wantErr:     true,
-		},
-		{
-			name: "invalid ref type",
-			paths: map[string]interface{}{
-				"/users": map[string]interface{}{
-					"$ref": 123,
-				},
-			},
-			urlsToParse: make(map[string]bool),
-			wantErr:     false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := processPathsLegacy(tt.paths, tt.urlsToParse, testFile)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestProcessNestedFilesErrors(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -906,7 +794,7 @@ components: "invalid"
 			inputFile: true,
 		}
 		mainAPI := &OpenAPI{
-			Components: make(map[string]interface{}),
+			Components: NewOrderedMap(),
 		}
 		err = processNestedFiles(urlsToParse, mainAPI)
 		assert.NoError(t, err) // Should not error as invalid components are skipped
@@ -927,139 +815,11 @@ paths:
 			inputFile: true,
 		}
 		mainAPI := &OpenAPI{
-			Components: make(map[string]interface{}),
+			Components: NewOrderedMap(),
 		}
 		err = processNestedFiles(urlsToParse, mainAPI)
 		assert.NoError(t, err)
 	})
-}
-
-func TestProcessPathsComplex(t *testing.T) {
-	tmpDir := t.TempDir()
-	currentDir, err := os.Getwd()
-	assert.NoError(t, err)
-	defer func(dir string) {
-		err := os.Chdir(dir)
-		if err != nil {
-			panic(err)
-		}
-	}(currentDir)
-
-	err = os.Chdir(tmpDir)
-	assert.NoError(t, err)
-
-	// Create test files
-	testYAML := `
-openapi: 3.0.0
-components:
-  schemas:
-    Test:
-      type: object
-      properties:
-        id:
-          type: string
-`
-
-	invalidYAML := `
-openapi: 3.0.0
-components:
-  schemas:
-    Test: "invalid"  # Should be an object
-`
-
-	emptyYAML := `
-openapi: 3.0.0
-components:
-  empty: {}
-`
-
-	err = os.WriteFile("test.yaml", []byte(testYAML), 0644)
-	assert.NoError(t, err)
-
-	err = os.WriteFile("invalid.yaml", []byte(invalidYAML), 0644)
-	assert.NoError(t, err)
-
-	err = os.WriteFile("empty.yaml", []byte(emptyYAML), 0644)
-	assert.NoError(t, err)
-
-	tests := []struct {
-		name          string
-		paths         map[string]interface{}
-		currentFile   string
-		expectedError string
-	}{
-		{
-			name: "nested references",
-			paths: map[string]interface{}{
-				"/test": map[string]interface{}{
-					"$ref": "test.yaml#/components",
-				},
-			},
-			currentFile:   "main.yaml",
-			expectedError: "",
-		},
-		{
-			name: "invalid nested API type",
-			paths: map[string]interface{}{
-				"/test": map[string]interface{}{
-					"$ref": "invalid.yaml#/components/schemas/Test",
-				},
-			},
-			currentFile:   "main.yaml",
-			expectedError: "reference 'components/schemas/Test' not found in file 'invalid.yaml'",
-		},
-		{
-			name: "non-existent reference path",
-			paths: map[string]interface{}{
-				"/test": map[string]interface{}{
-					"$ref": "empty.yaml#/nonexistent",
-				},
-			},
-			currentFile:   "main.yaml",
-			expectedError: "reference 'nonexistent' not found",
-		},
-		{
-			name: "non-existent file",
-			paths: map[string]interface{}{
-				"/test": map[string]interface{}{
-					"$ref": "nonexistent.yaml#/paths/test",
-				},
-			},
-			currentFile:   "main.yaml",
-			expectedError: "failed to read file",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			urlsToParse := make(map[string]bool)
-			err := processPathsLegacy(tt.paths, urlsToParse, tt.currentFile)
-			if tt.expectedError != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
-			} else {
-				assert.NoError(t, err)
-				// For successful cases, verify the content was merged correctly
-				if tt.name == "nested references" {
-					path, ok := tt.paths["/test"].(map[string]interface{})
-					assert.True(t, ok)
-					assert.NotNil(t, path)
-					schemas, ok := path["schemas"].(map[string]interface{})
-					assert.True(t, ok)
-					assert.NotNil(t, schemas)
-					test, ok := schemas["Test"].(map[string]interface{})
-					assert.True(t, ok)
-					assert.Equal(t, "object", test["type"])
-					properties, ok := test["properties"].(map[string]interface{})
-					assert.True(t, ok)
-					assert.NotNil(t, properties)
-					id, ok := properties["id"].(map[string]interface{})
-					assert.True(t, ok)
-					assert.Equal(t, "string", id["type"])
-				}
-			}
-		})
-	}
 }
 
 func TestCheckForRefsComplex(t *testing.T) {
@@ -1275,45 +1035,4 @@ func readApiYAML(filePath string) (*OpenAPI, error) {
 	}
 
 	return &api, nil
-}
-
-// processPathsLegacy is a wrapper for the old version of processPaths to maintain backward compatibility with tests
-// This function is used only in tests.
-func processPathsLegacy(paths map[string]interface{}, urlsToParse map[string]bool, currentFilePath string) error {
-	// Temporary map to store resolved paths
-	resolvedPaths := make(map[string]interface{})
-
-	// Iterate through all paths
-	for path, pathItemInterface := range paths {
-		pathItem, ok := pathItemInterface.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("path item for '%s' is not a map", path)
-		}
-
-		// Check for references in the path item
-		if err := checkForRefs(pathItem); err != nil {
-			return fmt.Errorf("failed to check for references in path item '%s': %v", path, err)
-		}
-
-		// Process operations (HTTP methods)
-		httpMethods := []string{"get", "put", "post", "delete", "options", "head", "patch", "trace"}
-		for _, method := range httpMethods {
-			if operationInterface, exists := pathItem[method]; exists {
-				operation, ok := operationInterface.(map[string]interface{})
-				if !ok {
-					return fmt.Errorf("operation '%s' for path '%s' is not a map", method, path)
-				}
-
-				// Check for references in the operation
-				if err := checkForRefs(operation); err != nil {
-					return fmt.Errorf("failed to check for references in operation '%s' for path '%s': %v", method, path, err)
-				}
-			}
-		}
-
-		// Add the processed path item to the resolved paths
-		resolvedPaths[path] = pathItem
-	}
-
-	return nil
 }

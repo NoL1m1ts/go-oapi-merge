@@ -46,16 +46,15 @@ func (e *MergeError) Unwrap() error {
 	return e.Cause
 }
 
-// OpenAPI represents the structure of the OpenAPI specification documents.
-// It contains all the main sections of the OpenAPI documents according to the specification.
+// OpenAPI represents the structure of the OpenAPI specification documents
 type OpenAPI struct {
-	OpenAPI    string                 `yaml:"openapi"`
-	Info       map[string]interface{} `yaml:"info"`
-	Servers    []interface{}          `yaml:"servers,omitempty"`
-	Paths      map[string]interface{} `yaml:"paths"`
-	Components map[string]interface{} `yaml:"components,omitempty"`
-	Security   []interface{}          `yaml:"security,omitempty"`
-	Tags       []interface{}          `yaml:"tags,omitempty"`
+	OpenAPI    string        `yaml:"openapi"`
+	Info       *OrderedMap   `yaml:"info"`
+	Servers    []interface{} `yaml:"servers,omitempty"`
+	Paths      *OrderedMap   `yaml:"paths"`
+	Components *OrderedMap   `yaml:"components,omitempty"`
+	Security   []interface{} `yaml:"security,omitempty"`
+	Tags       []interface{} `yaml:"tags,omitempty"`
 }
 
 // OapiYaml merges OpenAPI specifications from multiple files, preserving field order.
@@ -129,7 +128,7 @@ func validateOpenAPI(api *OpenAPI, inputFile string) error {
 
 	// Initialize components if they are missing
 	if api.Components == nil {
-		api.Components = make(map[string]interface{})
+		api.Components = NewOrderedMap()
 	}
 
 	return nil
@@ -272,8 +271,14 @@ func addMapEntry(node *yaml.Node, key string, value interface{}) error {
 	var valueNode *yaml.Node
 	switch v := value.(type) {
 	case *yaml.Node:
-		// If value is already a YAML node, use it directly
 		valueNode = v
+	case *OrderedMap:
+		valueNode = &yaml.Node{Kind: yaml.MappingNode}
+		if err := v.Iterate(func(k string, val interface{}) error {
+			return addMapEntry(valueNode, k, val)
+		}); err != nil {
+			return err
+		}
 	case string:
 		// Handle string values
 		valueNode = &yaml.Node{
@@ -798,53 +803,39 @@ func decodeRef(ref string) string {
 	return ref
 }
 
-// processPaths handles all paths in the OpenAPI specification and resolves references.
-// It collects URLs of external files that need to be processed.
-//
-// Parameters:
-//   - pathsNode: The YAML node for the paths section
-//   - paths: The paths section of the OpenAPI specification
-//   - urlsToParse: A map for collecting URLs of external files to be processed
-//   - currentFilePath: The path of the current file being processed
-//
-// Returns:
-//   - error: Any error that occurred during processing
-func processPaths(pathsNode *yaml.Node, paths map[string]interface{}, urlsToParse map[string]bool, currentFilePath string) error {
-	// Temporary map to store resolved paths
-	resolvedPaths := make(map[string]interface{})
+// processPaths handles all paths in the OpenAPI specification and resolves references
+func processPaths(pathsNode *yaml.Node, paths *OrderedMap, urlsToParse map[string]bool, currentFilePath string) error {
+	resolvedPaths := NewOrderedMap()
 
-	for pathKey, pathValue := range paths {
-		// Check if the path value is a reference
-		pathMap, ok := pathValue.(map[string]interface{})
-		if !ok {
+	for _, pathKey := range paths.Keys {
+		pathValue := paths.Values[pathKey]
+
+		pathMap := getMapFromValue(pathValue)
+		if pathMap == nil {
+			resolvedPaths.Set(pathKey, pathValue)
 			continue
 		}
 
-		// Check for the presence of a $ref key
 		refValue, hasRef := pathMap["$ref"]
 		if !hasRef {
-			// If there's no reference, save the path as is
-			resolvedPaths[pathKey] = pathValue
+			resolvedPaths.Set(pathKey, pathValue)
 			continue
 		}
 
-		// Get the reference string
 		refStr, ok := refValue.(string)
 		if !ok {
 			return &MergeError{
 				File:    currentFilePath,
 				Path:    pathKey,
-				Message: fmt.Sprintf("Invalid $ref type: expected string, got %T. The $ref value must be a string like './file.yaml#/path'", refValue),
+				Message: fmt.Sprintf("Invalid $ref type: expected string, got %T", refValue),
 			}
 		}
 
-		// If it's a reference to an internal component, save as is
 		if strings.HasPrefix(refStr, "#") {
-			resolvedPaths[pathKey] = pathValue
+			resolvedPaths.Set(pathKey, pathValue)
 			continue
 		}
 
-		// Resolve the reference path
 		refPath, err := resolveRef(refStr, currentFilePath)
 		if err != nil {
 			return &MergeError{
@@ -855,118 +846,106 @@ func processPaths(pathsNode *yaml.Node, paths map[string]interface{}, urlsToPars
 			}
 		}
 
-		// Add the file to the list for processing
 		urlsToParse[refPath] = true
 
-		// Split the reference into parts: file and internal path
 		parts := strings.SplitN(refStr, "#", 2)
 		if len(parts) < 2 {
 			return &MergeError{
 				File:    currentFilePath,
 				Path:    pathKey,
-				Message: fmt.Sprintf("Invalid $ref format '%s': missing fragment (the part after #). Expected format: './file.yaml#/path/to/resource'", refStr),
+				Message: fmt.Sprintf("Invalid $ref format '%s': missing fragment", refStr),
 			}
 		}
 
-		// Get the fragment (part after #)
 		fragment := parts[1]
 		if !strings.HasPrefix(fragment, "/") {
 			fragment = "/" + fragment
 		}
 
-		// Read the YAML file referenced by the reference
 		data, err := os.ReadFile(refPath)
 		if err != nil {
 			return &MergeError{
 				File:    currentFilePath,
 				Path:    pathKey,
-				Message: fmt.Sprintf("Cannot read referenced file '%s' (from $ref '%s'). Make sure the file exists and the path is correct", refPath, refStr),
+				Message: fmt.Sprintf("Cannot read referenced file '%s'", refPath),
 				Cause:   err,
 			}
 		}
 
-		// Parse the YAML content
 		var nested map[string]interface{}
 		if err := yaml.Unmarshal(data, &nested); err != nil {
 			return &MergeError{
 				File:    refPath,
-				Message: fmt.Sprintf("Invalid YAML syntax in referenced file (referenced from %s at path %s)", currentFilePath, pathKey),
+				Message: "Invalid YAML syntax in referenced file",
 				Cause:   err,
 			}
 		}
 
-		// Split the fragment into path parts
 		fragmentParts := strings.Split(strings.TrimPrefix(fragment, "/"), "/")
 
-		// Follow the fragment path sequentially
 		var current interface{} = nested
 		currentPath := ""
 		for _, part := range fragmentParts {
 			if part == "" {
 				continue
 			}
-
 			currentPath += "/" + part
 
-			// Convert the current node to a map
 			currentMap, ok := current.(map[string]interface{})
 			if !ok {
 				return &MergeError{
 					File:    refPath,
 					Path:    currentPath,
-					Message: fmt.Sprintf("Invalid reference structure: expected object at '%s', but got %T. Referenced from %s at path %s with $ref '%s'", currentPath, current, currentFilePath, pathKey, refStr),
+					Message: fmt.Sprintf("Invalid reference structure at '%s'", currentPath),
 				}
 			}
 
-			// Get the next node along the path
 			var exists bool
 			current, exists = currentMap[part]
 			if !exists {
-				// Provide helpful error message with available keys
-				availableKeys := make([]string, 0, len(currentMap))
-				for k := range currentMap {
-					availableKeys = append(availableKeys, k)
-				}
 				return &MergeError{
 					File:    refPath,
 					Path:    currentPath,
-					Message: fmt.Sprintf("Key '%s' not found at path '%s'. Referenced from %s at path %s with $ref '%s'. Available keys at this level: %v", part, currentPath, currentFilePath, pathKey, refStr, availableKeys),
+					Message: fmt.Sprintf("Key '%s' not found at path '%s'", part, currentPath),
 				}
 			}
 		}
 
-		// Convert the found node to a map
 		resolvedPathItem, ok := current.(map[string]interface{})
 		if !ok {
 			return &MergeError{
 				File:    refPath,
 				Path:    fragment,
-				Message: fmt.Sprintf("Invalid reference target: expected object at '%s', but got %T. Referenced from %s at path %s with $ref '%s'", fragment, current, currentFilePath, pathKey, refStr),
+				Message: fmt.Sprintf("Invalid reference target at '%s'", fragment),
 			}
 		}
 
-		// Process any nested references in the resolved path item
 		if err := findRef(resolvedPathItem, urlsToParse, refPath); err != nil {
 			return &MergeError{
 				File:    refPath,
 				Path:    fragment,
-				Message: fmt.Sprintf("Failed to process nested references (referenced from %s at path %s)", currentFilePath, pathKey),
+				Message: "Failed to process nested references",
 				Cause:   err,
 			}
 		}
 
-		// Save the resolved path
-		resolvedPaths[pathKey] = resolvedPathItem
+		resolvedPaths.Set(pathKey, resolvedPathItem)
 	}
 
-	// Replace the original paths with the resolved ones
-	for k := range paths {
-		delete(paths, k)
-	}
-	for k, v := range resolvedPaths {
-		paths[k] = v
-	}
+	paths.Keys = resolvedPaths.Keys
+	paths.Values = resolvedPaths.Values
 
+	return nil
+}
+
+// getMapFromValue extracts map[string]interface{} from value (handles both map and OrderedMap)
+func getMapFromValue(v interface{}) map[string]interface{} {
+	if m, ok := v.(map[string]interface{}); ok {
+		return m
+	}
+	if om, ok := v.(*OrderedMap); ok {
+		return om.ToMap()
+	}
 	return nil
 }
 
@@ -1026,87 +1005,38 @@ func processNestedFiles(urlsToParse map[string]bool, mainAPI *OpenAPI) error {
 	return nil
 }
 
-// mergeComponents merges components from external files into the main specification.
-// It handles schemas, responses, and examples, avoiding duplication.
-//
-// Parameters:
-//   - nestedComponents: The components from the external file
-//   - mainAPI: The main OpenAPI specification being built
-//
-// Returns:
-//   - error: Any error that occurred during merging
+// mergeComponents merges components from external files into the main specification
 func mergeComponents(nestedComponents map[string]interface{}, mainAPI *OpenAPI) error {
 	if err := checkForRefs(nestedComponents); err != nil {
 		return fmt.Errorf("failed to check for references in components: %v", err)
 	}
 
-	// Initialize components if they don't exist
 	if mainAPI.Components == nil {
-		mainAPI.Components = make(map[string]interface{})
+		mainAPI.Components = NewOrderedMap()
 	}
 
-	// Process schemas
-	if schemas, ok := nestedComponents["schemas"].(map[string]interface{}); ok {
-		if mainAPI.Components["schemas"] == nil {
-			mainAPI.Components["schemas"] = make(map[string]interface{})
-		}
-		mainSchemas := mainAPI.Components["schemas"].(map[string]interface{})
-
-		for name, schema := range schemas {
-			// Add schema to main API if it doesn't already exist
-			if _, exists := mainSchemas[name]; !exists {
-				mainSchemas[name] = schema
-			}
-		}
-	}
-
-	// Process responses
-	if responses, ok := nestedComponents["responses"].(map[string]interface{}); ok {
-		if mainAPI.Components["responses"] == nil {
-			mainAPI.Components["responses"] = make(map[string]interface{})
-		}
-		mainResponses := mainAPI.Components["responses"].(map[string]interface{})
-
-		for name, response := range responses {
-			// Add response to main API if it doesn't already exist
-			if _, exists := mainResponses[name]; !exists {
-				mainResponses[name] = response
-			}
-		}
-	}
-
-	// Process examples
-	if examples, ok := nestedComponents["examples"].(map[string]interface{}); ok {
-		if mainAPI.Components["examples"] == nil {
-			mainAPI.Components["examples"] = make(map[string]interface{})
-		}
-		mainExamples := mainAPI.Components["examples"].(map[string]interface{})
-
-		for name, example := range examples {
-			// Add example to main API if it doesn't already exist
-			if _, exists := mainExamples[name]; !exists {
-				mainExamples[name] = example
-			}
-		}
-	}
-
-	// Process other component types
 	componentTypes := []string{
-		"parameters", "requestBodies", "headers",
-		"securitySchemes", "links", "callbacks",
+		"schemas", "responses", "parameters", "examples", "requestBodies",
+		"headers", "securitySchemes", "links", "callbacks",
 	}
 
 	for _, compType := range componentTypes {
 		if components, ok := nestedComponents[compType].(map[string]interface{}); ok {
-			if mainAPI.Components[compType] == nil {
-				mainAPI.Components[compType] = make(map[string]interface{})
+			mainComp, exists := mainAPI.Components.Get(compType)
+			var mainCompMap *OrderedMap
+			if !exists || mainComp == nil {
+				mainCompMap = NewOrderedMap()
+				mainAPI.Components.Set(compType, mainCompMap)
+			} else if om, ok := mainComp.(*OrderedMap); ok {
+				mainCompMap = om
+			} else {
+				mainCompMap = NewOrderedMap()
+				mainAPI.Components.Set(compType, mainCompMap)
 			}
-			mainComponents := mainAPI.Components[compType].(map[string]interface{})
 
 			for name, component := range components {
-				// Add component to main API if it doesn't already exist
-				if _, exists := mainComponents[name]; !exists {
-					mainComponents[name] = component
+				if _, exists := mainCompMap.Get(name); !exists {
+					mainCompMap.Set(name, component)
 				}
 			}
 		}
