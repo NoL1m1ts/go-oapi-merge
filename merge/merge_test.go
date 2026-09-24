@@ -505,8 +505,6 @@ func writeFile(t *testing.T, path, content string) {
 	}
 }
 
-// --- OpenAPI 3.2 support ---
-
 func TestOapiYamlOpenAPI32Version(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
@@ -618,12 +616,10 @@ paths:
 		t.Fatalf("expected 6 tags, got %d", len(tags))
 	}
 
-	// Root tag: no parent.
 	if v := getMapSliceValue(tags["Catalog"], "parent"); v != nil {
 		t.Errorf("Catalog should not have a parent, got %v", v)
 	}
 
-	// Child tag with description.
 	if got := getMapSliceValue(tags["Categories"], "parent"); got != "Catalog" {
 		t.Errorf("Categories.parent = %v, want Catalog", got)
 	}
@@ -631,7 +627,6 @@ paths:
 		t.Errorf("Categories.description = %v, want %q", got, "Category management")
 	}
 
-	// Multiple children of the same parent.
 	if got := getMapSliceValue(tags["Items"], "parent"); got != "Catalog" {
 		t.Errorf("Items.parent = %v, want Catalog", got)
 	}
@@ -639,12 +634,10 @@ paths:
 		t.Errorf("Bundles.parent = %v, want Catalog", got)
 	}
 
-	// Multiple nesting levels: FeaturedItems -> Items -> Catalog.
 	if got := getMapSliceValue(tags["FeaturedItems"], "parent"); got != "Items" {
 		t.Errorf("FeaturedItems.parent = %v, want Items", got)
 	}
 
-	// Tag with externalDocs and no parent.
 	if v := getMapSliceValue(tags["Legacy"], "parent"); v != nil {
 		t.Errorf("Legacy should not have a parent, got %v", v)
 	}
@@ -793,14 +786,6 @@ components:
 	}
 }
 
-// TestOapiYamlPreservesExtraRootFields covers the root-level fields
-// OapiYaml preserves verbatim even though they aren't modeled by the
-// OpenAPI struct: OpenAPI 3.1's "jsonSchemaDialect", 3.2's "$self"/
-// "summary", "externalDocs", and vendor "x-" extensions. None of these
-// can contain a $ref, so they round-trip unprocessed. "webhooks" *is*
-// modeled by the struct and gets full $ref resolution; that's covered
-// separately in TestOapiYamlResolvesWebhookReferences and
-// TestOapiYamlOmitsAbsentWebhooks.
 func TestOapiYamlPreservesExtraRootFields(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
@@ -851,8 +836,6 @@ $self: https://example.com/api
 		t.Errorf("externalDocs.url = %v", got)
 	}
 
-	// Extra fields must appear after the known struct fields, and in
-	// their original relative order.
 	data, err := os.ReadFile(output)
 	if err != nil {
 		t.Fatalf("read output: %v", err)
@@ -956,13 +939,10 @@ components:
 		t.Fatalf("webhooks missing or wrong type")
 	}
 
-	// The external $ref must be resolved (inlined) rather than left dangling.
 	if got := mapValueAt(t, webhooks, "newItem", "post", "summary"); got != "New item webhook" {
 		t.Errorf("webhooks.newItem.post.summary = %v, want %q", got, "New item webhook")
 	}
 
-	// The transitively referenced schema must be rewritten to a local ref
-	// and its content merged into components, exactly like a path $ref.
 	schemaRef := mapValueAt(t, webhooks, "newItem", "post", "requestBody", "content", "application/json", "schema", "$ref")
 	if schemaRef != "#/components/schemas/Item" {
 		t.Errorf("webhook schema ref = %v, want #/components/schemas/Item", schemaRef)
@@ -1012,8 +992,6 @@ components:
 	doc := unmarshalDoc(t, output)
 	paths, components := docPathsAndComponents(t, doc)
 
-	// The nested external $ref must be rewritten to a local ref, not left
-	// pointing at the other file.
 	schemaRef := mapValueAt(t, paths, "/test", "get", "responses", "200", "content", "application/json", "schema", "$ref")
 	if schemaRef != "#/components/schemas/Item" {
 		t.Errorf("inline path schema ref = %v, want #/components/schemas/Item", schemaRef)
@@ -1170,8 +1148,6 @@ func mapValueAt(t *testing.T, root yaml.MapSlice, keys ...string) any {
 	return value
 }
 
-// --- MergeError ---
-
 func TestMergeErrorMessageFormatting(t *testing.T) {
 	tests := []struct {
 		name string
@@ -1215,8 +1191,6 @@ func TestMergeErrorUnwrap(t *testing.T) {
 		t.Errorf("Unwrap() = %v, want %v", err.Unwrap(), cause)
 	}
 }
-
-// --- Error paths through OapiYaml ---
 
 func TestOapiYamlInvalidYAMLSyntax(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -1454,11 +1428,12 @@ func TestOapiYamlRefFragmentWithDoubleSlash(t *testing.T) {
 	paths := filepath.Join(tmpDir, "paths.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
 
-	writeFile(t, paths, `test:
-  get:
-    responses:
-      "200":
-        description: OK
+	writeFile(t, paths, `"":
+  test:
+    get:
+      responses:
+        "200":
+          description: OK
 `)
 	writeFile(t, input, `
 openapi: "3.0.0"
@@ -1518,10 +1493,6 @@ func TestOapiYamlNestedFileReadFailure(t *testing.T) {
 	paths := filepath.Join(tmpDir, "paths.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
 
-	// paths.yaml's own components reference a file that doesn't exist. Since
-	// the root document has no pre-existing "User" schema, this reference
-	// isn't discarded as a duplicate and gets queued for merging, so the
-	// missing file surfaces as a real error from processNestedFiles.
 	writeFile(t, paths, `
 users:
   get:
@@ -1590,8 +1561,6 @@ paths:
 	}
 }
 
-// --- Root fields not otherwise covered ---
-
 func TestOapiYamlServersRoundTrip(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
@@ -1634,7 +1603,6 @@ paths:
 		t.Errorf("servers[0].url = %v", got)
 	}
 
-	// servers must be positioned before paths in the output.
 	data, err := os.ReadFile(output)
 	if err != nil {
 		t.Fatalf("read output: %v", err)
@@ -1676,8 +1644,6 @@ paths:
 		}
 	}
 }
-
-// --- Deprecated compatibility type ---
 
 func TestOpenAPITypeRoundTrips(t *testing.T) {
 	data := []byte(`
@@ -1745,22 +1711,11 @@ tags:
 	}
 }
 
-// --- Root field type validation ---
-//
-// OapiYaml parses into the fixed OpenAPI struct, so a wrongly-typed known
-// root field (e.g. a mapping where an array is expected) fails the
-// unmarshal outright, rather than being silently dropped from the
-// output. The underlying goccy/go-yaml error (available via
-// errors.Unwrap) names the mismatch directly; MergeError's own top-level
-// message is intentionally generic (see TestMergeErrorMessageFormatting).
-
 func TestOapiYamlRejectsMistypedSecurity(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
 
-	// security must be an array of security requirement objects, not a
-	// single mapping.
 	writeFile(t, input, `
 openapi: "3.0.0"
 info:
@@ -1871,18 +1826,7 @@ paths:
 	}
 }
 
-// --- Literal "example" data is not distinguished from real references ---
-//
-// findRefs follows every "$ref" it finds, unconditionally. This is a
-// known, accepted limitation: an OpenAPI Schema/Media Type "example"
-// field that happens to contain a literal value shaped like a Reference
-// Object (a map with only a "$ref" key) is indistinguishable from a real
-// one and gets treated as such — surfacing as a clear "file not found"
-// error if no such file exists, or, if one coincidentally does, having
-// its content substituted in place of the literal example. Avoid using a
-// bare {$ref: ...}-shaped value as literal example/default data.
-
-func TestOapiYamlLiteralExampleShapedLikeARefErrorsClearly(t *testing.T) {
+func TestOapiYamlPreservesLiteralExternalRefExample(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
@@ -1903,16 +1847,14 @@ paths:
               example:
                 $ref: 'not-a-file.yaml#/data'
 `)
-	err := OapiYaml(input, output)
-	if err == nil {
-		t.Fatal("expected an error: 'not-a-file.yaml' looks like an external $ref and doesn't exist")
+	if err := OapiYaml(input, output); err != nil {
+		t.Fatalf("literal example must not be resolved: %v", err)
 	}
-	if !strings.Contains(err.Error(), "failed to read") {
-		t.Errorf("unexpected error: %v", err)
+	doc := unmarshalDoc(t, output)
+	if got := mapValueAt(t, doc, "paths", "/test", "get", "responses", "200", "content", "application/json", "example", "$ref"); got != "not-a-file.yaml#/data" {
+		t.Fatalf("literal example changed: %v", got)
 	}
 }
-
-// --- Generic component category merging ---
 
 func TestOapiYamlMergesUnlistedComponentCategories(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -1920,9 +1862,6 @@ func TestOapiYamlMergesUnlistedComponentCategories(t *testing.T) {
 	extra := filepath.Join(tmpDir, "extra.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
 
-	// "pathItems" (and this made-up "widgets" category) aren't in the
-	// hardcoded componentTypes list, but since they're nested under a
-	// "components:" object they should still be merged generically.
 	writeFile(t, extra, `
 components:
   pathItems:
@@ -1966,18 +1905,12 @@ paths:
 	}
 }
 
-// --- Dangling local reference detection ---
-
-func TestOapiYamlRejectsDanglingReferenceToUnimportableTarget(t *testing.T) {
+func TestOapiYamlImportsReferenceOutsideComponents(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
 	definitions := filepath.Join(tmpDir, "definitions.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
 
-	// "Pet" lives at the bare top level of definitions.yaml: no
-	// "components:" wrapper, and not a recognized component category name,
-	// so nothing ever copies it into the merged output. The rewritten
-	// local ref "#/Pet" would otherwise dangle silently.
 	writeFile(t, definitions, `
 Pet:
   type: object
@@ -2001,23 +1934,16 @@ paths:
               schema:
                 $ref: './definitions.yaml#/Pet'
 `)
-	err := OapiYaml(input, output)
-	if err == nil {
-		t.Fatal("expected an explicit error for a reference that can't be imported")
+	if err := OapiYaml(input, output); err != nil {
+		t.Fatalf("could not import Pet: %v", err)
 	}
-	if !strings.Contains(err.Error(), "does not resolve") {
-		t.Errorf("unexpected error: %v", err)
+	doc := unmarshalDoc(t, output)
+	if got := mapValueAt(t, doc, "paths", "/test", "get", "responses", "200", "content", "application/json", "schema", "properties", "name", "type"); got != "string" {
+		t.Fatalf("Pet was not inlined: %v", got)
 	}
 }
 
-// TestOapiYamlLiteralExampleShapedLikeALocalRefErrorsClearly is the
-// dangling-reference-check counterpart of
-// TestOapiYamlLiteralExampleShapedLikeARefErrorsClearly: a literal
-// example value shaped like an already-local ($ref: '#/...') Reference
-// Object is, for the same reason, indistinguishable from a real one, and
-// the dangling-reference validator correctly (if not exactly
-// intentionally) flags it when the "referenced" value doesn't exist.
-func TestOapiYamlLiteralExampleShapedLikeALocalRefErrorsClearly(t *testing.T) {
+func TestOapiYamlPreservesLiteralLocalRefExample(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
@@ -2038,23 +1964,14 @@ paths:
               example:
                 $ref: '#/components/schemas/DoesNotExist'
 `)
-	err := OapiYaml(input, output)
-	if err == nil {
-		t.Fatal("expected an error: the literal example ref doesn't resolve to anything merged")
+	if err := OapiYaml(input, output); err != nil {
+		t.Fatalf("literal local reference must not be validated: %v", err)
 	}
-	if !strings.Contains(err.Error(), "does not resolve") {
-		t.Errorf("unexpected error: %v", err)
+	doc := unmarshalDoc(t, output)
+	if got := mapValueAt(t, doc, "paths", "/test", "get", "responses", "200", "content", "application/json", "example", "$ref"); got != "#/components/schemas/DoesNotExist" {
+		t.Fatalf("literal example changed: %v", got)
 	}
 }
-
-// --- "example" as an author-chosen name, not the literal-data keyword ---
-//
-// isLiteralDataKey("example") must only apply when "example" is the
-// OpenAPI Schema/Media Type keyword. A schema property, or a reusable
-// components.examples entry, can itself be named "example" — in which
-// case its value is an ordinary nested object (a Schema Object, or an
-// Example Object that may legitimately be a $ref) that must still be
-// scanned normally.
 
 func TestOapiYamlResolvesRefUnderPropertyNamedExample(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -2109,8 +2026,6 @@ func TestOapiYamlResolvesRefUnderComponentsExampleNamedExample(t *testing.T) {
 	shared := filepath.Join(tmpDir, "shared.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
 
-	// A reusable Example Object named "example" (components.examples.example)
-	// that is itself a $ref to another file.
 	writeFile(t, shared, `
 components:
   examples:
