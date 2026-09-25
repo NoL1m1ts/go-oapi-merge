@@ -1,0 +1,63 @@
+openapi: 3.2.0
+info:
+  title: Example Catalog API
+  version: 1.0.0
+  description: Example OpenAPI 3.2 API demonstrating native hierarchical tags
+paths:
+  /categories:
+    get:
+      tags:
+      - Categories
+      summary: List categories
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+  /items:
+    get:
+      tags:
+      - Items
+      summary: List items
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+components:
+  schemas:
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        price:
+          type: number
+          format: float
+tags:
+- name: Catalog
+- name: Categories
+  description: Browse catalog categories
+  parent: Catalog
+- name: Items
+  description: Browse catalog items
+  parent: Catalog

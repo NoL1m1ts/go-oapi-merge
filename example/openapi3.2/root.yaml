@@ -1,0 +1,22 @@
+openapi: 3.2.0
+info:
+  title: Example Catalog API
+  version: 1.0.0
+  description: Example OpenAPI 3.2 API demonstrating native hierarchical tags
+
+tags:
+  - name: Catalog
+
+  - name: Categories
+    description: Browse catalog categories
+    parent: Catalog
+
+  - name: Items
+    description: Browse catalog items
+    parent: Catalog
+
+paths:
+  /categories:
+    $ref: './categories.yaml#/categories'
+  /items:
+    $ref: './items.yaml#/items'
