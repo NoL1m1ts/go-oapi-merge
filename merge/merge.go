@@ -2,6 +2,7 @@ package merge
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -56,7 +57,7 @@ func OapiYaml(inputFile, outputFile string) error {
 	}
 
 	var mainAPI OpenAPI
-	if err := yaml.UnmarshalWithOptions(data, &mainAPI, yaml.UseOrderedMap()); err != nil {
+	if err := decodeYAML(data, &mainAPI); err != nil {
 		return &MergeError{File: inputFile, Message: "Invalid OpenAPI YAML structure", Cause: err}
 	}
 
@@ -93,7 +94,7 @@ func OapiYaml(inputFile, outputFile string) error {
 		return err
 	}
 
-	data, err = yaml.MarshalWithOptions(&mainAPI, yaml.Indent(2), yaml.UseLiteralStyleIfMultiline(true))
+	data, err = marshalYAML(&mainAPI)
 	if err != nil {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}
@@ -118,7 +119,7 @@ var namedExtraRootFields = map[string]bool{
 // extraRootFields preserves supported extra fields and extensions in source order.
 func extraRootFields(data []byte) (yaml.MapSlice, error) {
 	var raw yaml.MapSlice
-	if err := yaml.UnmarshalWithOptions(data, &raw, yaml.UseOrderedMap()); err != nil {
+	if err := decodeYAML(data, &raw); err != nil {
 		return nil, err
 	}
 
@@ -137,11 +138,11 @@ func extraRootFields(data []byte) (yaml.MapSlice, error) {
 
 func appendExtraRootFields(marshaled []byte, extra yaml.MapSlice) ([]byte, error) {
 	var doc yaml.MapSlice
-	if err := yaml.UnmarshalWithOptions(marshaled, &doc, yaml.UseOrderedMap()); err != nil {
+	if err := decodeYAML(marshaled, &doc); err != nil {
 		return nil, err
 	}
 	doc = append(doc, extra...)
-	return yaml.MarshalWithOptions(doc, yaml.Indent(2), yaml.UseLiteralStyleIfMultiline(true))
+	return marshalYAML(doc)
 }
 
 func processPathItemMap(paths *yaml.MapSlice, resolver *referenceResolver, currentFilePath string, hasExtensions bool) error {
@@ -171,17 +172,21 @@ func processPathItemMap(paths *yaml.MapSlice, resolver *referenceResolver, curre
 			continue
 		}
 
-		parts := strings.SplitN(refStr, "#", 2)
-		if len(parts) < 2 {
-			return &MergeError{File: currentFilePath, Path: pathKey, Message: fmt.Sprintf("Invalid $ref format '%s': missing fragment", refStr)}
+		file, fragment, _ := strings.Cut(refStr, "#")
+		file, err := url.PathUnescape(file)
+		if err != nil {
+			return &MergeError{File: currentFilePath, Path: pathKey, Message: "Invalid reference URL", Cause: err}
 		}
 
-		refPath := resolveRef(parts[0], currentFilePath)
+		refPath := resolveRef(file, currentFilePath)
 		resolver.files[refPath] = true
 
-		fragment := parts[1]
-		if fragment != "" && !strings.HasPrefix(fragment, "/") {
-			fragment = "/" + fragment
+		pointer, err := decodeReferenceFragment(fragment, refPath)
+		if err != nil {
+			return err
+		}
+		if pointer != "" && !strings.HasPrefix(pointer, "/") {
+			pointer = "/" + pointer
 		}
 
 		data, err := os.ReadFile(refPath)
@@ -190,11 +195,11 @@ func processPathItemMap(paths *yaml.MapSlice, resolver *referenceResolver, curre
 		}
 
 		var nested yaml.MapSlice
-		if err := yaml.UnmarshalWithOptions(data, &nested, yaml.UseOrderedMap()); err != nil {
+		if err := decodeYAML(data, &nested); err != nil {
 			return &MergeError{File: refPath, Message: "Invalid YAML syntax", Cause: err}
 		}
 
-		current, err := navigateToFragment(nested, fragment, refPath)
+		current, err := navigateToPointer(nested, pointer, refPath)
 		if err != nil {
 			return err
 		}
@@ -213,7 +218,23 @@ func processPathItemMap(paths *yaml.MapSlice, resolver *referenceResolver, curre
 	return nil
 }
 
-func navigateToFragment(nested yaml.MapSlice, fragment, refPath string) (any, error) {
+func decodeReferenceFragment(fragment, refPath string) (string, error) {
+	decoded, err := url.PathUnescape(fragment)
+	if err != nil {
+		return "", &MergeError{File: refPath, Path: fragment, Message: "Invalid reference fragment", Cause: err}
+	}
+	return decoded, nil
+}
+
+func navigateToFragment(nested any, fragment, refPath string) (any, error) {
+	pointer, err := decodeReferenceFragment(fragment, refPath)
+	if err != nil {
+		return nil, err
+	}
+	return navigateToPointer(nested, pointer, refPath)
+}
+
+func navigateToPointer(nested any, fragment, refPath string) (any, error) {
 	var current any = nested
 	if fragment == "" {
 		return current, nil
@@ -228,7 +249,7 @@ func navigateToFragment(nested yaml.MapSlice, fragment, refPath string) (any, er
 			}
 		case []any:
 			index, err := strconv.Atoi(part)
-			if err != nil || index < 0 || index >= len(value) {
+			if err != nil || index < 0 || index >= len(value) || strconv.Itoa(index) != part {
 				return nil, &MergeError{File: refPath, Path: fragment, Message: "Invalid reference array index"}
 			}
 			current = value[index]
@@ -279,7 +300,7 @@ func processNestedFiles(resolver *referenceResolver, components *yaml.MapSlice) 
 			}
 
 			var nested yaml.MapSlice
-			if err := yaml.UnmarshalWithOptions(data, &nested, yaml.UseOrderedMap()); err != nil {
+			if err := decodeYAML(data, &nested); err != nil {
 				return fmt.Errorf("failed to parse '%s': %w", url, err)
 			}
 
@@ -387,10 +408,16 @@ func validateNoDanglingLocalRefs(mainAPI *OpenAPI, inputFile string) error {
 	}
 	validate := func(object yaml.MapSlice, _ objectKind) (any, error) {
 		ref, ok := getMapSliceValue(object, "$ref").(string)
-		if ok && strings.HasPrefix(ref, "#/") {
+		if ok && strings.HasPrefix(ref, "#") {
 			fragment := strings.TrimPrefix(ref, "#")
-			if _, err := navigateToFragment(root, fragment, inputFile); err != nil {
-				return nil, &MergeError{File: inputFile, Path: fragment, Message: fmt.Sprintf("Reference '#%s' does not resolve to a merged value", fragment)}
+			pointer, err := decodeReferenceFragment(fragment, inputFile)
+			if err != nil {
+				return nil, err
+			}
+			if strings.HasPrefix(pointer, "/") {
+				if _, err := navigateToPointer(root, pointer, inputFile); err != nil {
+					return nil, &MergeError{File: inputFile, Path: fragment, Message: fmt.Sprintf("Reference '#%s' does not resolve to a merged value", fragment)}
+				}
 			}
 		}
 		return object, nil

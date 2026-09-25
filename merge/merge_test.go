@@ -1210,7 +1210,7 @@ info: [this is not valid
 	}
 }
 
-func TestOapiYamlInvalidRefFormatInPaths(t *testing.T) {
+func TestOapiYamlMissingBareReferenceInPaths(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
@@ -1226,14 +1226,14 @@ paths:
 `)
 	err := OapiYaml(input, output)
 	if err == nil {
-		t.Fatal("expected error for $ref missing a fragment")
+		t.Fatal("expected error for a missing referenced file")
 	}
-	if !strings.Contains(err.Error(), "missing fragment") {
+	if !strings.Contains(err.Error(), "Cannot read referenced file") {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
 
-func TestOapiYamlInvalidRefFormatInWebhooks(t *testing.T) {
+func TestOapiYamlMissingBareReferenceInWebhooks(t *testing.T) {
 	tmpDir := t.TempDir()
 	input := filepath.Join(tmpDir, "api.yaml")
 	output := filepath.Join(tmpDir, "out.yaml")
@@ -1255,9 +1255,9 @@ webhooks:
 `)
 	err := OapiYaml(input, output)
 	if err == nil {
-		t.Fatal("expected error for $ref missing a fragment")
+		t.Fatal("expected error for a missing referenced file")
 	}
-	if !strings.Contains(err.Error(), "missing fragment") {
+	if !strings.Contains(err.Error(), "Cannot read referenced file") {
 		t.Errorf("unexpected error: %v", err)
 	}
 }

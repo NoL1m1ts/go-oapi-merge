@@ -2,6 +2,7 @@ package merge
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -198,9 +199,17 @@ func (r *referenceResolver) walk(value any, kind objectKind, source string) (any
 			return object, nil
 		}
 		file, fragment, _ := strings.Cut(ref, "#")
+		file, err := url.PathUnescape(file)
+		if err != nil {
+			return nil, &MergeError{File: source, Message: "Invalid reference URL", Cause: err}
+		}
+		pointer, err := decodeReferenceFragment(fragment, source)
+		if err != nil {
+			return nil, err
+		}
 		local := file == ""
 		// Component references use the merged namespace; other references use their source file.
-		if local && (filepath.Clean(source) == filepath.Clean(r.inputFile) || strings.HasPrefix(fragment, "/components/")) {
+		if local && (filepath.Clean(source) == filepath.Clean(r.inputFile) || strings.HasPrefix(pointer, "/components/")) {
 			return object, nil
 		}
 		refPath := source
@@ -211,16 +220,18 @@ func (r *referenceResolver) walk(value any, kind objectKind, source string) (any
 		if err != nil {
 			return nil, fmt.Errorf("failed to read '%s': %w", refPath, err)
 		}
-		var doc yaml.MapSlice
-		if err := yaml.UnmarshalWithOptions(data, &doc, yaml.UseOrderedMap()); err != nil {
+		var doc any
+		if err := decodeYAML(data, &doc); err != nil {
 			return nil, fmt.Errorf("failed to parse '%s': %w", refPath, err)
 		}
-		target, err := navigateToFragment(doc, fragment, refPath)
+		target, err := navigateToPointer(doc, pointer, refPath)
 		if err != nil {
 			return nil, err
 		}
-		r.files[refPath] = true
-		if strings.HasPrefix(fragment, "/components/") {
+		if _, mapping := doc.(yaml.MapSlice); mapping {
+			r.files[refPath] = true
+		}
+		if strings.HasPrefix(pointer, "/components/") {
 			setMapSliceValue(&object, "$ref", "#"+fragment)
 			return object, nil
 		}
@@ -230,7 +241,7 @@ func (r *referenceResolver) walk(value any, kind objectKind, source string) (any
 		if realPath, err := filepath.EvalSymlinks(refPath); err == nil {
 			identity = realPath
 		}
-		identity += "#" + fragment
+		identity += "#" + pointer
 		if r.active[identity] {
 			return nil, &MergeError{File: refPath, Path: fragment, Message: "Cannot inline a cyclic reference outside components"}
 		}

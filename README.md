@@ -143,6 +143,12 @@ Error: open api.yaml: no such file or directory
 2. **Resolves References**: It identifies `$ref` references, reads the linked files, and merges their content into the main file.
 3. **Saves the Result**: The final merged OpenAPI specification is saved to the file specified with the `-output` flag.
 
+### YAML input and output
+
+Each input file must contain one YAML document. Block and flow styles, JSON input, UTF-8 BOM, LF/CRLF, YAML aliases, and merge keys (`<<`) are supported. Explicit keys override merged keys; duplicate explicit keys, cyclic aliases, and excessive alias expansion are rejected. Dates retain their original text. Output normalizes formatting, expands aliases, and may change quoting or multiline style while preserving values.
+
+Local file references may omit the fragment to select the entire document. Percent-encoded filenames and JSON Pointer fragments are decoded when resolving references.
+
 ### A note on `$ref` detection
 
 Reference handling follows the OpenAPI/JSON Schema object structure. Literal `example` data, Example Object `value` fields, schema `default`/`const`/`enum`/`examples`, and vendor extensions are preserved, including literal `$ref` properties and YAML aliases. Real references in properties or named examples still resolve even when their names are `example`, `default`, `$ref`, or start with `x-`.
